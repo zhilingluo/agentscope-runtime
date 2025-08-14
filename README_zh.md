@@ -1,0 +1,289 @@
+<div align="center">
+# AgentScope Runtime
+
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
+[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](https://github.com/agentscope-ai/agentscope-runtime)
+[![License](https://img.shields.io/badge/license-Apache%202.0-yellow.svg)](LICENSE)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+[[English README]](README.md)
+
+**智能体应用的生产就绪运行时框架**
+
+*AgentScope Runtime 解决了智能体开发中的两个关键挑战：安全的沙盒工具执行和可扩展的智能体服务化部署。凭借双核架构，AgentScope Runtime提供了与智能体框架无关的基础设施，以实现智能体部署的可观察性和安全工具调用。*
+
+</div>
+
+---
+
+## ✨ 关键特性
+
+- **🏗️ 部署基础设施**：内置服务用于历史会话管理、长期记忆和沙盒环境生命周期控制
+- **🔒 沙盒工具执行**：隔离的沙盒确保安全工具执行，不会影响系统
+- **🔧 框架无关**：不绑定任何特定智能体框架，与流行的开源智能体框架和自定义实现无缝集成
+- ⚡ **对开发者友好**：简单部署并提供强大的自定义选项
+- **📊 可观察性**：对运行时操作进行全面跟踪和监控
+
+---
+
+## 💬 联系我们
+
+欢迎加入我们的社区，获取最新的更新和支持！
+
+| [Discord](https://discord.gg/eYMpfnkG8h)                     | 钉钉群                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| <img src="https://gw.alicdn.com/imgextra/i1/O1CN01hhD1mu1Dd3BWVUvxN_!!6000000000238-2-tps-400-400.png" width="100" height="100"> | <img src="https://img.alicdn.com/imgextra/i1/O1CN01LxzZha1thpIN2cc2E_!!6000000005934-2-tps-497-477.png" width="100" height="100"> |
+
+---
+
+## 📋 目录
+
+- [🚀 快速开始](#-快速开始)
+- [📚 指南](#-指南)
+- [🔌智能体框架集成](#-智能体框架集成)
+- [🏗️ 部署](#️-部署)
+- [🤝 贡献](#-贡献)
+- [📄 许可证](#-许可证)
+
+---
+
+## 🚀 快速开始
+
+### 前提条件
+- Python 3.10 或更高版本
+- pip 或 uv 包管理器
+
+### 安装
+
+```bash
+# 安装依赖项
+pip install agentscope-runtime
+
+# 安装沙盒依赖项
+pip install "agentscope-runtime[sandbox]"
+```
+
+### 基本智能体使用示例
+
+此示例演示如何使用 AgentScope Runtime 创建简单的 LLM 智能体并从 Qwen 模型流式传输响应。
+
+```python
+import asyncio
+import os
+from agentscope_runtime.engine import Runner
+from agentscope_runtime.engine.agents.llm_agent import LLMAgent
+from agentscope_runtime.engine.llms import QwenLLM
+from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
+from agentscope_runtime.engine.services.context_manager import ContextManager
+
+
+async def main():
+    # 设置语言模型和智能体
+    model = QwenLLM(
+        model_name="qwen-turbo",
+        api_key=os.getenv("DASHSCOPE_API_KEY"),
+    )
+    llm_agent = LLMAgent(model=model, name="llm_agent")
+
+    async with ContextManager() as context_manager:
+        runner = Runner(agent=llm_agent, context_manager=context_manager)
+
+        # 创建请求并流式传输响应
+        request = AgentRequest(
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "法国的首都是什么？",
+                        },
+                    ],
+                },
+            ],
+        )
+
+        async for message in runner.stream_query(request=request):
+            if hasattr(message, "text"):
+                print(f"流式答案: {message.text}")
+
+
+asyncio.run(main())
+```
+
+### 基本沙盒使用示例
+
+此示例演示如何创建沙盒并在沙盒中执行工具。
+
+```python
+from agentscope_runtime.sandbox import BaseSandbox
+
+with BaseSandbox() as box:
+    print(box.run_ipython_cell(code="print('你好')"))
+    print(box.run_shell_command(command="echo hello"))
+```
+
+---
+
+## 📚 指南
+
+- **[📖 Cookbook](/cookbook/zh/intro.md)**: 全面教程
+- **[💡 概念](/cookbook/zh/concept.md)**: 核心概念和架构概述
+- **[🚀 快速开始](/cookbook/zh/quickstart.md)**: 快速入门教程
+- **[🏠 展示厅](/cookbook/zh/demohouse.md)**: 丰富的示例项目
+
+---
+
+## 🔌 智能体框架集成
+
+### AgentScope 集成
+
+```python
+import os
+
+from agentscope.agent import ReActAgent
+from agentscope.model import OpenAIChatModel
+from agentscope_runtime.engine.agents.agentscope_agent import AgentScopeAgent
+
+agent = AgentScopeAgent(
+    name="Friday",
+    model=OpenAIChatModel(
+        "gpt-4",
+        api_key=os.getenv("OPENAI_API_KEY"),
+    ),
+    agent_config={
+        "sys_prompt": "You're a helpful assistant named {name}.",
+    },
+    agent_builder=ReActAgent,
+)
+```
+
+### Agno集成
+
+```python
+from agno.agent import Agent
+from agno.models.openai import OpenAIChat
+from agentscope_runtime.engine.agents.agno_agent import AgnoAgent
+
+agent = AgnoAgent(
+    name="Friday",
+    model=OpenAIChat(
+        id="gpt-4",
+    ),
+    agent_config={
+        "instructions": "You're a helpful assistant.",
+    },
+    agent_builder=Agent,
+)
+```
+
+### LangGraph集成
+
+```python
+from typing import TypedDict
+from langgraph import graph, types
+from agentscope_runtime.engine.agents.langgraph_agent import LangGraphAgent
+
+
+# 定义状态
+class State(TypedDict, total=False):
+    id: str
+
+
+# 定义节点函数
+async def set_id(state: State):
+    new_id = state.get("id")
+    assert new_id is not None, "must set ID"
+    return types.Command(update=State(id=new_id), goto="REVERSE_ID")
+
+
+async def reverse_id(state: State):
+    new_id = state.get("id")
+    assert new_id is not None, "ID must be set before reversing"
+    return types.Command(update=State(id=new_id[::-1]))
+
+
+state_graph = graph.StateGraph(state_schema=State)
+state_graph.add_node("SET_ID", set_id)
+state_graph.add_node("REVERSE_ID", reverse_id)
+state_graph.set_entry_point("SET_ID")
+compiled_graph = state_graph.compile(name="ID Reversal")
+agent = LangGraphAgent(graph=compiled_graph)
+```
+
+> [!NOTE]
+>
+> 更多智能体框架集成即将推出！
+
+---
+
+## 🏗️ 部署
+
+智能体运行器使用了`deploy` 方法，该方法采用一个 `DeployManager` 实例并部署智能体。服务端口在创建 `LocalDeployManager` 时设置为参数 `port`。服务端点路径在部署智能体时设置为参数 `endpoint_path`。在此示例中，我们将端点路径设置为 `/process`。部署后，您可以通过 [http://localhost:8090/process](http://localhost:8090/process) 访问该服务。
+
+```python
+from agentscope_runtime.engine.deployers import LocalDeployManager
+
+# 创建部署管理器
+deploy_manager = LocalDeployManager(
+    host="localhost",
+    port=8090,
+)
+
+# 将智能体部署为流式服务
+deploy_result = await runner.deploy(
+    deploy_manager=deploy_manager,
+    endpoint_path="/process",
+    stream=True,  # 启用流式响应
+)
+```
+
+---
+
+## 🤝 贡献
+
+我们欢迎来自社区的贡献！您可以提供以下帮助：
+
+### 🐛 错误报告
+
+- 使用 GitHub Issues 报告错误
+- 包含详细的重现步骤
+- 提供系统信息和日志
+
+### 💡 特性请求
+
+- 在 GitHub Discussions 中讨论新想法
+- 遵循特性请求模板
+- 考虑实施的可行性
+
+### 🔧 代码贡献
+
+1. Fork 这个仓库
+2. 创建一个功能分支 (git checkout -b feature/amazing-feature)
+3. 提交更改 (git commit -m 'Add amazing feature')
+4. 推送到分支 (git push origin feature/amazing-feature)
+5. 打开一个 Pull Request
+
+有关如何贡献的详细指南，请查看 [如何贡献](cookbook/zh/contribute.md).
+
+---
+
+## 📄 许可证
+
+AgentScope Runtime 根据 [Apache License 2.0](LICENSE) 发布。
+
+```
+Copyright 2025 Tongyi Lab
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```

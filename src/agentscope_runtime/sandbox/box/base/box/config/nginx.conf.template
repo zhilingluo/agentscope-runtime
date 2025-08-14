@@ -1,0 +1,15 @@
+worker_processes 1;
+
+events { worker_connections 1024; }
+
+http {
+    server {
+        listen 80;
+
+        location /fastapi {
+            rewrite ^/fastapi(.*)$ $1 break;
+
+            proxy_pass http://localhost:8000;
+        }
+    }
+}

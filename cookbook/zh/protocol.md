@@ -1,0 +1,368 @@
+---
+jupytext:
+  formats: md:myst
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.11.5
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
+# Agent API 协议规范
+
+## 概述
+
+本文档描述了与AI智能体通信的结构化JSON协议。该协议定义了支持以下功能的消息、请求和响应：
+
++ 流式内容传输
++ 工具/函数调用
++ 多模态内容（文本、图像、数据）
++ 全生命周期的状态跟踪
++ 错误处理
+
+## 协议结构
+
+### 1. 核心枚举
+
+**角色**：
+
+```{code-cell}
+class Role:
+    ASSISTANT = "assistant"
+    USER = "user"
+    SYSTEM = "system"
+```
+
+**消息类型**：
+
+```{code-cell}
+class MessageType:
+    MESSAGE = "message"
+    FUNCTION_CALL = "function_call"
+    FUNCTION_CALL_OUTPUT = "function_call_output"
+    PLUGIN_CALL = "plugin_call"
+    PLUGIN_CALL_OUTPUT = "plugin_call_output"
+    COMPONENT_CALL = "component_call"
+    COMPONENT_CALL_OUTPUT = "component_call_output"
+    MCP_LIST_TOOLS = "mcp_list_tools"
+    MCP_APPROVAL_REQUEST = "mcp_approval_request"
+    MCP_TOOL_CALL = "mcp_call"
+    MCP_APPROVAL_RESPONSE = "mcp_approval_response"
+    HEARTBEAT = "heartbeat"
+    ERROR = "error"
+```
+
+**运行状态**：
+
+```{code-cell}
+class RunStatus:
+    Created = "created"
+    InProgress = "in_progress"
+    Completed = "completed"
+    Canceled = "canceled"
+    Failed = "failed"
+    Rejected = "rejected"
+    Unknown = "unknown"
+```
+
+### 2. 工具定义
+
+**函数参数**：
+
+```{code-cell}
+class FunctionParameters(BaseModel):
+    type: str  # 必须为 "object"
+    properties: Dict[str, Any]
+    required: Optional[List[str]]
+```
+
+**函数工具**：
+
+```{code-cell}
+class FunctionTool(BaseModel):
+    name: str
+    description: str
+    parameters: Union[Dict[str, Any], FunctionParameters]
+```
+
+**工具**：
+
+```{code-cell}
+class Tool(BaseModel):
+    type: Optional[str] = None  # 目前仅支持 "function"
+    function: Optional[FunctionTool] = None
+```
+
+**函数调用**：
+```{code-cell}
+class FunctionCall(BaseModel):
+    """
+    助手提示消息工具调用函数的模型类
+    """
+
+    call_id: Optional[str] = None
+    """工具调用的ID"""
+
+    name: Optional[str] = None
+    """要调用的函数名称"""
+
+    arguments: Optional[str] = None
+    """调用函数的参数，由模型生成的JSON格式
+
+    注意：模型生成的JSON不一定有效，可能产生未定义的参数。
+    在调用函数前请验证参数有效性
+    """
+```
+
+**函数调用输出**：
+```{code-cell}
+class FunctionCallOutput(BaseModel):
+    """
+    助手提示消息工具调用函数的模型类
+    """
+
+    call_id: str
+    """工具调用的ID"""
+
+    output: str
+    """函数执行结果"""
+```
+
+### 3. 内容模型
+
+**基础内容模型**：
+
+```{code-cell}
+class Content(Event):
+    type: str
+    """内容部分的类型"""
+
+    object: str = "content"
+    """内容部分的标识"""
+
+    index: Optional[int] = None
+    """在消息内容列表中的索引位置"""
+
+    delta: Optional[bool] = False
+    """是否为增量内容"""
+
+    msg_id: str = None
+    """消息唯一ID"""
+```
+
+**专用内容类型**：
+
+```{code-cell}
+class ImageContent(Content):
+    type: str = ContentType.IMAGE
+    """内容部分的类型"""
+
+    image_url: Optional[str] = None
+    """图片URL详情"""
+
+
+class TextContent(Content):
+    type: str = ContentType.TEXT
+    """内容部分的类型"""
+
+    text: Optional[str] = None
+    """文本内容"""
+
+
+class DataContent(Content):
+    type: str = ContentType.DATA
+    """内容部分的类型"""
+
+    data: Optional[Dict] = None
+    """数据内容"""
+```
+
+### 4. 消息模型
+
+```{code-cell}
+class Message(Event):
+    id: str = Field(default_factory=lambda: "msg_" + str(uuid4()))
+    """消息唯一ID"""
+
+    object: str = "message"
+    """消息标识"""
+
+    type: str = "message"
+    """消息类型"""
+
+    status: str = RunStatus.Created
+    """消息状态：in_progress, completed 或 incomplete"""
+
+    role: Optional[str] = None
+    """消息作者角色，应为 `user`,`system`, 'assistant'"""
+
+    content: Optional[
+        List[Union[TextContent, ImageContent, DataContent]]
+    ] = None
+    """消息内容"""
+
+    code: Optional[str] = None
+    """消息错误代码"""
+
+    message: Optional[str] = None
+    """消息错误描述"""
+```
+
+**关键方法**：
+
++ `add_delta_content()`: 向现有消息追加部分内容
++ `content_completed()`: 标记内容片段为完成状态
++ `add_content()`: 添加完整的内容片段
+
+### 5. 请求模型
+
+**基础请求**：
+
+```{code-cell}
+class BaseRequest(BaseModel):
+    input: List[Message]
+    stream: bool = True
+```
+
+**智能体请求**：
+
+```{code-cell}
+class AgentRequest(BaseRequest):
+    model: Optional[str] = None
+    top_p: Optional[float] = None
+    temperature: Optional[float] = None
+    frequency_penalty: Optional[float] = None
+    presence_penalty: Optional[float] = None
+    max_tokens: Optional[int] = None
+    stop: Optional[Union[Optional[str], List[str]]] = None
+    n: Optional[int] = Field(default=1, ge=1, le=5)
+    seed: Optional[int] = None
+    tools: Optional[List[Union[Tool, Dict]]] = None
+    session_id: Optional[str] = None
+    response_id: Optional[str] = None
+```
+
+### 6. 响应模型
+
+**基础响应**：
+
+```{code-cell}
+class BaseResponse(Event):
+    sequence_number: str = None
+    id: str = Field(default_factory=lambda: "response_" + str(uuid4()))
+    object: str = "response"
+    created_at: int = int(datetime.now().timestamp())
+    completed_at: Optional[int] = None
+    error: Optional[Error] = None
+    output: Optional[List[Message]] = None
+    usage: Optional[Dict] = None
+```
+
+**智能体响应**：
+
+```{code-cell}
+class AgentResponse(BaseResponse):
+    session_id: Optional[str] = None
+```
+
+### 7. 错误模型
+
+```{code-cell}
+class Error(BaseModel):
+    code: str
+    message: str
+```
+
+## 协议流程
+
+### 请求/响应生命周期
+
+1. 客户端发送 `AgentRequest`，包含：
+   - 输入消息
+   - 生成参数
+   - 工具定义
+   - 会话上下文
+2. 服务端响应 `AgentResponse` 对象流，包含：
+   - 状态更新 (`created` → `in_progress` → `completed`)
+   - 带内容片段的输出消息
+   - 最终使用指标
+
+### 内容流式传输
+
+当请求中 `stream=True` 时：
+
++ 文本内容以 `delta=true` 片段增量发送
++ 每个片段包含指向目标内容槽的 `index`
++ 最终片段通过 `status=completed` 标记完成
+
+**流式传输示例**：
+
+```bash
+{"status":"created","id":"response_...","object":"response"}
+{"status":"created","id":"msg_...","object":"message","type":"assistant"}
+{"status":"in_progress","type":"text","index":0,"delta":true,"text":"Hello","object":"content"}
+{"status":"in_progress","type":"text","index":0,"delta":true,"text":", ","object":"content"}
+{"status":"in_progress","type":"text","index":0,"delta":true,"text":"world","object":"content"}
+{"status":"completed","type":"text","index":0,"delta":false,"text":"Hello, world!","object":"content"}
+{"status":"completed","id":"msg_...","object":"message", ...}
+{"status":"completed","id":"response_...","object":"response", ...}
+```
+
+### 状态转换
+
+| 状态         | 描述                       |
+| ------------- | -------------------------- |
+| `created`     | 对象创建时的初始状态       |
+| `in_progress` | 操作正在处理中             |
+| `completed`   | 操作成功完成               |
+| `failed`      | 操作因错误终止             |
+| `rejected`    | 操作被系统拒绝             |
+| `canceled`    | 操作被用户取消             |
+
+
+## 最佳实践
+
+1. **流处理**：
+   - 缓冲增量片段直到收到 `status=completed`
+   - 使用 `msg_id` 关联内容与父消息
+   - 尊重多片段消息的 `index` 顺序
+2. **错误处理**：
+   - 检查响应中的 `error` 字段
+   - 监控 `failed` 状态转换
+   - 对可恢复错误实施重试逻辑
+3. **状态管理**：
+   - 使用 `session_id` 保持会话连续性
+   - 跟踪 `created_at`/`completed_at` 监控延迟
+   - 使用 `sequence_number` 排序（如已实现）
+
+## 使用示例
+
+**用户查询**：
+
+```json
+{
+  "input": [{
+    "role": "user",
+    "content": [{"type": "text", "text": "描述这张图片"}],
+    "type": "message"
+  }],
+  "stream": true,
+  "model": "gpt-4-vision"
+}
+```
+
+**智能体响应流**：
+
+```bash
+{"id":"response_123","object":"response","status":"created"}
+{"id":"msg_abc","object":"message","type":"assistant","status":"created"}
+{"status":"in_progress","type":"text","index":0,"delta":true,"text":"这张","object":"content","msg_id":"msg_abc"}
+{"status":"in_progress","type":"text","index":0,"delta":true,"text":"图片显示...","object":"content","msg_id":"msg_abc"}
+{"status":"completed","type":"text","index":0,"delta":false,"text":"这张图片显示...","object":"content","msg_id":"msg_abc"}
+{"id":"msg_abc","status":"completed","object":"message"}
+{"id":"response_123","status":"completed","object":"response"}
+```

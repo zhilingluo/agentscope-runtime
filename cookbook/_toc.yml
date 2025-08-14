@@ -1,0 +1,53 @@
+format: jb-book
+root: en/intro
+parts:
+- caption: English
+  numbered: 1
+  chapters:
+  - file: en/install.md
+  - file: en/concept.md
+  - file: en/quickstart.md
+  - file: en/sandbox.md
+    sections:
+    - file: en/sandbox_advanced.md
+    - file: en/training_sandbox.md
+  - file: en/react_agent.md
+  - file: en/protocol.md
+    sections:
+    - file: en/a2a_support.md
+  - file: en/manager.md
+    sections:
+      - file: en/context_manager.md
+      - file: en/environment_manager.md
+  - file: en/tracing.md
+  - file: en/demohouse.md
+  - file: en/contribute.md
+    sections:
+    - file: en/README.md
+- caption: 简介
+  chapters:
+    - file: zh/intro.md
+      title: "0. 介绍"
+- caption: 中文
+  numbered: 1
+  chapters:
+  - file: zh/install.md
+  - file: zh/concept.md
+  - file: zh/quickstart.md
+  - file: zh/sandbox.md
+    sections:
+      - file: zh/sandbox_advanced.md
+      - file: zh/training_sandbox.md
+  - file: zh/react_agent.md
+  - file: zh/protocol.md
+    sections:
+      - file: zh/a2a_support.md
+  - file: zh/manager.md
+    sections:
+      - file: zh/context_manager.md
+      - file: zh/environment_manager.md
+  - file: zh/tracing.md
+  - file: zh/demohouse.md
+  - file: zh/contribute.md
+    sections:
+      - file: zh/README.md
