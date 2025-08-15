@@ -12,7 +12,7 @@ It contains following features:
 - Storage of conversations: on SQLite.
 - agent deployment management: the agent is deployed as a service.
 
-<video src="https://cloud.video.taobao.com/vod/Tx-VhP3RxcO2ae51QCRuXzxKSw6OdbzLiNYgcUdMBZE.mp4" controls width="800"></video><br />
+<video src="https://cloud.video.taobao.com/vod/Tx-VhP3RxcO2ae51QCRuXzxKSw6OdbzLiNYgcUdMBZE.mp4" controls width="480"></video><br />
 
 <img src="https://img.alicdn.com/imgextra/i3/O1CN01YJ6p8d23NoBS0XRf6_!!6000000007244-0-tps-1000-1798.jpg" alt="screenshot3" width="30%">
 <img src="https://img.alicdn.com/imgextra/i4/O1CN01zbM3k11ks3dw9QclG_!!6000000004738-0-tps-1000-1798.jpg" alt="screenshot1" width="30%">

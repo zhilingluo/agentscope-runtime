@@ -6,7 +6,8 @@ It contains following key features:
 2. The agent is wrapped as an Agentscope-Runtime agent and deployed as a service.
 3. The interaction with the agent is done through a simple CLI.
 
-<img src="https://img.alicdn.com/imgextra/i1/O1CN01PcyOQG1x05yvB31n0_!!6000000006380-0-tps-1666-1140.jpg" alt="video of browser-use demo" width="800"><br />
+<video src="https://cloud.video.taobao.com/vod/-BhtPfhYZv8pCz7L1vYmKCDtf1QEaDXNX1hMnvj_BUQ.mp4" controls width="480"></video>
+<br />
 
 ## 🌳 Project Structure
 ```bash
