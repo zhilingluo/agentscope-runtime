@@ -13,9 +13,13 @@ It contains following features:
 - agent deployment management: the agent is deployed as a service.
 
 
-Click following image to see the video demo:
+Click following image to watch the video demo:
 
-[![watch_the_video](https://img.alicdn.com/imgextra/i2/6000000000045/O1CN01YV1cS41CCeuGnbNU1_!!6000000000045-0-tbvideo.jpg)](https://cloud.video.taobao.com/vod/Tx-VhP3RxcO2ae51QCRuXzxKSw6OdbzLiNYgcUdMBZE.mp4)
+<a href="https://cloud.video.taobao.com/vod/Tx-VhP3RxcO2ae51QCRuXzxKSw6OdbzLiNYgcUdMBZE.mp4" >
+<img src = "https://img.alicdn.com/imgextra/i2/6000000000045/O1CN01YV1cS41CCeuGnbNU1_!!6000000000045-0-tbvideo.jpg" alt="video" width="50%" />
+</a>
+
+<br />
 
 <img src="https://img.alicdn.com/imgextra/i3/O1CN01YJ6p8d23NoBS0XRf6_!!6000000007244-0-tps-1000-1798.jpg" alt="screenshot3" width="30%">
 <img src="https://img.alicdn.com/imgextra/i4/O1CN01zbM3k11ks3dw9QclG_!!6000000004738-0-tps-1000-1798.jpg" alt="screenshot1" width="30%">
