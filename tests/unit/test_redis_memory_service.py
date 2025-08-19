@@ -30,18 +30,21 @@ async def memory_service():
     # check redis
     healthy = await service.health()
     if not healthy:
-        raise RuntimeError("Redis is unavailable("
-                           "default：localhost:6379)")
+        raise RuntimeError(
+            "Redis is unavailable(default：localhost:6379)",
+        )
     try:
         yield service
     finally:
         await service.stop()
+
 
 @pytest.mark.asyncio
 async def test_service_lifecycle(memory_service: RedisMemoryService):
     assert await memory_service.health() is True
     await memory_service.stop()
     assert await memory_service.health() is False
+
 
 @pytest.mark.asyncio
 async def test_add_and_search_memory_no_session(
@@ -54,6 +57,7 @@ async def test_add_and_search_memory_no_session(
     retrieved = await memory_service.search_memory(user_id, messages)
     assert [m.dict() for m in retrieved] == [m.dict() for m in messages]
 
+
 @pytest.mark.asyncio
 async def test_add_and_search_memory_with_session(
     memory_service: RedisMemoryService,
@@ -65,6 +69,7 @@ async def test_add_and_search_memory_with_session(
     await memory_service.add_memory(user_id, messages, session_id)
     retrieved = await memory_service.search_memory(user_id, messages)
     assert [m.dict() for m in retrieved] == [m.dict() for m in messages]
+
 
 @pytest.mark.asyncio
 async def test_search_memory_multiple_sessions(
@@ -93,6 +98,7 @@ async def test_search_memory_multiple_sessions(
     assert len(retrieved_apple) == 1
     assert messages1[0].dict() == retrieved_apple[0].dict()
 
+
 @pytest.mark.asyncio
 async def test_search_memory_with_top_k(memory_service: RedisMemoryService):
     user_id = "user4"
@@ -113,6 +119,7 @@ async def test_search_memory_with_top_k(memory_service: RedisMemoryService):
 
     assert [m.dict() for m in retrieved] == [m.dict() for m in messages[-3:]]
 
+
 @pytest.mark.asyncio
 async def test_search_memory_no_match(memory_service: RedisMemoryService):
     user_id = "user_nomatch"
@@ -123,6 +130,7 @@ async def test_search_memory_no_match(memory_service: RedisMemoryService):
     search_query = [create_message(Role.USER, "xyz")]
     retrieved = await memory_service.search_memory(user_id, search_query)
     assert retrieved == []
+
 
 @pytest.mark.asyncio
 async def test_list_memory_pagination(memory_service: RedisMemoryService):
@@ -139,7 +147,9 @@ async def test_list_memory_pagination(memory_service: RedisMemoryService):
         filters={"page_size": 10, "page_num": 1},
     )
     assert len(listed_page1) == 10
-    assert [m.dict() for m in listed_page1] == [m.dict() for m in all_messages[0:10]]
+    assert [m.dict() for m in listed_page1] == [
+        m.dict() for m in all_messages[0:10]
+    ]
 
     # Page 2
     listed_page2 = await memory_service.list_memory(
@@ -147,7 +157,9 @@ async def test_list_memory_pagination(memory_service: RedisMemoryService):
         filters={"page_size": 10, "page_num": 2},
     )
     assert len(listed_page2) == 10
-    assert [m.dict() for m in listed_page2] == [m.dict() for m in all_messages[10:20]]
+    assert [m.dict() for m in listed_page2] == [
+        m.dict() for m in all_messages[10:20]
+    ]
 
     # Page 3
     listed_page3 = await memory_service.list_memory(
@@ -155,7 +167,10 @@ async def test_list_memory_pagination(memory_service: RedisMemoryService):
         filters={"page_size": 10, "page_num": 3},
     )
     assert len(listed_page3) == 10
-    assert [m.dict() for m in listed_page3] == [m.dict() for m in all_messages[20:30]]
+    assert [m.dict() for m in listed_page3] == [
+        m.dict() for m in all_messages[20:30]
+    ]
+
 
 @pytest.mark.asyncio
 async def test_delete_memory_session(memory_service: RedisMemoryService):
@@ -180,8 +195,11 @@ async def test_delete_memory_session(memory_service: RedisMemoryService):
     assert len(retrieved) == 1
     assert msg2.dict() == retrieved[0].dict()
 
-    hash_keys = await memory_service._redis.hkeys(memory_service._user_key(user_id))
+    hash_keys = await memory_service._redis.hkeys(
+        memory_service._user_key(user_id),
+    )
     assert session_id not in hash_keys
+
 
 @pytest.mark.asyncio
 async def test_delete_memory_user(memory_service: RedisMemoryService):
@@ -202,6 +220,7 @@ async def test_delete_memory_user(memory_service: RedisMemoryService):
         [create_message(Role.USER, "some")],
     )
     assert retrieved == []
+
 
 @pytest.mark.asyncio
 async def test_operations_on_non_existent_user(

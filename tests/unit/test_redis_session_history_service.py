@@ -8,7 +8,7 @@ from agentscope_runtime.engine.services.session_history_service import (
     Session,
 )
 from agentscope_runtime.engine.services.redis_session_history_service import (
-    RedisSessionHistoryService
+    RedisSessionHistoryService,
 )
 
 
@@ -20,13 +20,13 @@ async def session_history_service() -> RedisSessionHistoryService:
     # check redis
     healthy = await service.health()
     if not healthy:
-        raise RuntimeError("Redis is unavailable("
-                           "default：localhost:6379)")
+        raise RuntimeError(
+            "Redis is unavailable(default：localhost:6379)",
+        )
     try:
         yield service
     finally:
         await service.stop()
-
 
 
 @pytest.fixture
@@ -173,7 +173,7 @@ async def test_list_sessions(
 ) -> None:
     """Tests listing sessions for a user."""
     await session_history_service.delete_user_sessions(user_id)
-    other_user_id="other_user"
+    other_user_id = "other_user"
     await session_history_service.delete_user_sessions(other_user_id)
     # Initially, no sessions
     sessions = await session_history_service.list_sessions(user_id)
@@ -266,9 +266,8 @@ async def test_append_message(
         session.id,
     )
     assert len(stored_session.messages) == 4
-    for i,msg in enumerate(stored_session.messages[2:]):
+    for i, msg in enumerate(stored_session.messages[2:]):
         assert msg.content == messages3[i].get("content")
-
 
     # Test appending to a non-existent session
     non_existent_session = Session(

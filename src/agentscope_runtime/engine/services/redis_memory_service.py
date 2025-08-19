@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
 from typing import Optional, Dict, Any
-
-import redis.asyncio as aioredis
 import json
+import redis.asyncio as aioredis
+
 
 from .memory_service import MemoryService
 from ..schemas.agent_schemas import Message, MessageType
@@ -12,7 +13,7 @@ class RedisMemoryService(MemoryService):
     A Redis-based implementation of the memory service.
     """
 
-    def __init__(self, redis_url: str = 'redis://localhost:6379/0'):
+    def __init__(self, redis_url: str = "redis://localhost:6379/0"):
         self._redis_url = redis_url
         self._redis = None
         self._DEFAULT_SESSION_ID = "default"
@@ -29,6 +30,7 @@ class RedisMemoryService(MemoryService):
 
     async def health(self) -> bool:
         """Checks the health of the service."""
+
         if not self._redis:
             return False
         try:
@@ -106,7 +108,7 @@ class RedisMemoryService(MemoryService):
             and "top_k" in filters
             and isinstance(filters["top_k"], int)
         ):
-            return matched_messages[-filters["top_k"]:]
+            return matched_messages[-filters["top_k"] :]
 
         return matched_messages
 
@@ -167,11 +169,11 @@ class RedisMemoryService(MemoryService):
         Deletes all memory data for a specific user.
 
         Args:
-            user_id (str): The ID of the user whose memory data should be deleted
+            user_id (str): The ID of the user whose memory data should be
+            deleted
         """
         if not self._redis:
             raise RuntimeError("Redis connection is not available")
 
         key = self._user_key(user_id)
         await self._redis.delete(key)
-
