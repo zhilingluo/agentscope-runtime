@@ -1,5 +1,6 @@
-import json
+# -*- coding: utf-8 -*-
 import uuid
+
 from typing import Optional, Dict, Any, List, Union
 
 import redis.asyncio as aioredis
@@ -55,7 +56,6 @@ class RedisSessionHistoryService(SessionHistoryService):
         session = Session(id=sid, user_id=user_id, messages=[])
         key = self._session_key(user_id, sid)
 
-
         await self._redis.set(key, self._session_to_json(session))
         await self._redis.sadd(self._index_key(user_id), sid)
         return session
@@ -102,7 +102,6 @@ class RedisSessionHistoryService(SessionHistoryService):
             List[Dict[str, Any]],
         ],
     ):
-
         if not isinstance(message, list):
             message = [message]
         norm_message = []
@@ -111,9 +110,7 @@ class RedisSessionHistoryService(SessionHistoryService):
                 msg = Message.model_validate(msg)
             norm_message.append(msg)
 
-
         session.messages.extend(norm_message)
-
 
         user_id = session.user_id
         session_id = session.id
@@ -122,7 +119,7 @@ class RedisSessionHistoryService(SessionHistoryService):
         session_json = await self._redis.get(key)
         if session_json:
             stored_session = self._session_from_json(session_json)
-            stored_session.messages.extend([msg for msg in norm_message])
+            stored_session.messages.extend(norm_message)
             await self._redis.set(key, self._session_to_json(stored_session))
             await self._redis.sadd(self._index_key(user_id), session_id)
         else:
@@ -131,17 +128,16 @@ class RedisSessionHistoryService(SessionHistoryService):
                 f"append_message.",
             )
 
-
     async def delete_user_sessions(self, user_id: str) -> None:
         """
         Deletes all session history data for a specific user.
 
         Args:
-            user_id (str): The ID of the user whose session history data should be deleted
+            user_id (str): The ID of the user whose session history data should
+             be deleted
         """
         if not self._redis:
             raise RuntimeError("Redis connection is not available")
-
 
         index_key = self._index_key(user_id)
         session_ids = await self._redis.smembers(index_key)
