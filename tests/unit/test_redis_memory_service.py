@@ -212,7 +212,6 @@ async def test_delete_memory_user(memory_service: RedisMemoryService):
 
     await memory_service.delete_memory(user_id)
 
-    # Redis 删除整个 key
     keys = await memory_service._redis.keys(memory_service._user_key(user_id))
     assert memory_service._user_key(user_id) not in keys
     retrieved = await memory_service.search_memory(

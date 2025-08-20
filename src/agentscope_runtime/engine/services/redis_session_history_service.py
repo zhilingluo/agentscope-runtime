@@ -36,12 +36,10 @@ class RedisSessionHistoryService(SessionHistoryService):
         return f"session_index:{user_id}"
 
     def _session_to_json(self, session: Session) -> str:
-        return session.model_dump_json()  # Pydantic v2
-        # return session.json()  # for Pydantic v1
+        return session.model_dump_json()
 
     def _session_from_json(self, s: str) -> Session:
-        return Session.model_validate_json(s)  # Pydantic v2
-        # return Session.parse_raw(s)  # for Pydantic v1
+        return Session.model_validate_json(s)
 
     async def create_session(
         self,
