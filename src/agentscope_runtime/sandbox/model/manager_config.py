@@ -5,10 +5,14 @@ from typing import Optional, Literal, Tuple
 from pydantic import BaseModel, Field, model_validator
 
 
+UUID_LENGTH = 25
+
+
 class SandboxManagerEnvConfig(BaseModel):
     container_prefix_key: str = Field(
         "runtime_sandbox_container_",
         description="Prefix for keys related to Container models.",
+        max_length=63 - UUID_LENGTH,  # Max length for k8s pod name
     )
 
     file_system: Literal["local", "oss"] = Field(
@@ -23,9 +27,10 @@ class SandboxManagerEnvConfig(BaseModel):
         ...,
         description="Indicates if Redis is enabled.",
     )
-    container_deployment: Literal["docker", "cloud"] = Field(
+    container_deployment: Literal["docker", "cloud", "k8s"] = Field(
         ...,
-        description="container_deployment: 'docker'.",
+        description="Container deployment backend: 'docker', 'cloud', "
+        "or 'k8s'.",
     )
 
     default_mount_dir: Optional[str] = Field(
@@ -93,6 +98,18 @@ class SandboxManagerEnvConfig(BaseModel):
     redis_container_pool_key: str = Field(
         "_runtime_sandbox_container_container_pool",
         description="Prefix for Redis keys related to container pool.",
+    )
+
+    # Kubernetes settings
+    k8s_namespace: Optional[str] = Field(
+        "default",
+        description="Kubernetes namespace to deploy pods. Required if "
+        "container_deployment is 'k8s'.",
+    )
+    kubeconfig_path: Optional[str] = Field(
+        None,
+        description="Path to kubeconfig file. If not set, will try "
+        "in-cluster config or default kubeconfig.",
     )
 
     @model_validator(mode="after")
