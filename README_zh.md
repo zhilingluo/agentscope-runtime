@@ -16,6 +16,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Join_Us-blueviolet.svg?logo=discord)](https://discord.gg/eYMpfnkG8h)
 [![DingTalk](https://img.shields.io/badge/DingTalk-Join_Us-orange.svg)](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11)
 
+[[Cookbook]](https://runtime.agentscope.io/)
 [[English README]](README.md)
 
 **智能体应用的生产就绪运行时框架**
@@ -151,7 +152,7 @@ with BaseSandbox() as box:
 
 > [!NOTE]
 >
-> 当前版本需要安装并运行Docker，未来我们将提供Kubernetes部署和公有云部署选项。请参考[此教程](https://runtime.agentscope.io/zh/sandbox.html)了解更多详情。
+> 当前版本需要安装并运行Docker或者Kubernetes，未来我们将提供更多公有云部署选项。请参考[此教程](https://runtime.agentscope.io/zh/sandbox.html)了解更多详情。
 
 ---
 
