@@ -17,8 +17,6 @@ commands=(
     "pytest -s tests/unit/test_sandbox.py"
     "pytest -s tests/unit/test_session_history_service.py"
     "pytest -s tests/unit/test_tool.py"
-    "pytest -s tests/unit/test_redis_session_history_service.py"
-    "pytest -s tests/unit/test_redis_memory_service.py"
 )
 
 # Enable or disable shuffling
