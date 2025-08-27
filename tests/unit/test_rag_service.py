@@ -4,6 +4,17 @@ import os
 import pytest
 from dotenv import load_dotenv
 
+from agentscope_runtime.engine import Runner
+from agentscope_runtime.engine.agents.llm_agent import LLMAgent
+from agentscope_runtime.engine.llms import QwenLLM
+from agentscope_runtime.engine.schemas.agent_schemas import (
+    MessageType,
+    AgentRequest,
+    RunStatus,
+)
+from agentscope_runtime.engine.services.context_manager import (
+    create_context_manager,
+)
 from agentscope_runtime.engine.services.rag_service import LangChainRAGService
 
 if os.path.exists("../../.env"):
@@ -46,7 +57,7 @@ async def test_from_docs():
         "What is self-reflection of an AI Agent?",
     )
     assert len(ret_docs) == 1
-    assert ret_docs[0].page_content.startswith("Self-Reflection")
+    assert ret_docs[0].startswith("Self-Reflection")
 
 
 @pytest.mark.asyncio
@@ -56,4 +67,56 @@ async def test_from_db():
         "What is self-reflection of an AI Agent?",
     )
     assert len(ret_docs) == 1
-    assert ret_docs[0].page_content.startswith("Self-Reflection")
+    assert ret_docs[0].startswith("Self-Reflection")
+
+
+@pytest.mark.asyncio
+async def test_rag():
+    rag_service = LangChainRAGService(uri="./assets/milvus_demo.db")
+    USER_ID = "user2"
+    SESSION_ID = "session1"
+    query = "What is self-reflection of an AI Agent?"
+
+    llm_agent = LLMAgent(
+        model=QwenLLM(),
+        name="llm_agent",
+        description="A simple LLM agent",
+    )
+
+    async with create_context_manager(
+        rag_service=rag_service,
+    ) as context_manager:
+        runner = Runner(
+            agent=llm_agent,
+            context_manager=context_manager,
+            environment_manager=None,
+        )
+
+        all_result = ""
+        # print("\n")
+        request = AgentRequest(
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": query,
+                        },
+                    ],
+                },
+            ],
+            session_id=SESSION_ID,
+        )
+
+        async for message in runner.stream_query(
+            user_id=USER_ID,
+            request=request,
+        ):
+            if (
+                message.object == "message"
+                and MessageType.MESSAGE == message.type
+                and RunStatus.Completed == message.status
+            ):
+                all_result = message.content[0].text
+        print(all_result)
