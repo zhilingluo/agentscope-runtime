@@ -2,17 +2,8 @@
 import os
 from typing import Optional, Tuple, Literal
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import field_validator, ConfigDict
 from dotenv import load_dotenv
-
-env_file = ".env"
-env_example_file = ".env.example"
-
-# Load the appropriate .env file
-if os.path.exists(env_file):
-    load_dotenv(env_file)
-elif os.path.exists(env_example_file):
-    load_dotenv(env_example_file)
 
 
 class Settings(BaseSettings):
@@ -27,11 +18,10 @@ class Settings(BaseSettings):
 
     # Runtime Manager settings
     DEFAULT_SANDBOX_TYPE: str = "base"
-    WORKDIR: str = "/workspace"
     POOL_SIZE: int = 1
     AUTO_CLEANUP: bool = True
     CONTAINER_PREFIX_KEY: str = "runtime_sandbox_container_"
-    CONTAINER_DEPLOYMENT: Literal["docker", "cloud"] = "docker"
+    CONTAINER_DEPLOYMENT: Literal["docker", "cloud", "k8s"] = "docker"
     DEFAULT_MOUNT_DIR: str = "sessions_mount_dir"
     STORAGE_FOLDER: str = "runtime_sandbox_storage"
     PORT_RANGE: Tuple[int, int] = (49152, 59152)
@@ -53,9 +43,14 @@ class Settings(BaseSettings):
     OSS_ACCESS_KEY_SECRET: str = "your-access-key-secret"
     OSS_BUCKET_NAME: str = "your-bucket-name"
 
-    class Config:
-        env_file = env_file if os.path.exists(env_file) else env_example_file
-        case_sensitive = True
+    # K8S settings
+    K8S_NAMESPACE: str = "default"
+    KUBECONFIG_PATH: Optional[str] = None
+
+    model_config = ConfigDict(
+        case_sensitive=True,
+        extra="allow",
+    )
 
     @field_validator("WORKERS", mode="before")
     @classmethod
@@ -65,4 +60,21 @@ class Settings(BaseSettings):
         return value
 
 
-settings = Settings()
+_settings: Optional[Settings] = None
+
+
+def get_settings(config_file: Optional[str] = None) -> Settings:
+    global _settings
+
+    env_file = ".env"
+    env_example_file = ".env.example"
+
+    if _settings is None:
+        if config_file and os.path.exists(config_file):
+            load_dotenv(config_file, override=True)
+        elif os.path.exists(env_file):
+            load_dotenv(env_file)
+        elif os.path.exists(env_example_file):
+            load_dotenv(env_example_file)
+        _settings = Settings()
+    return _settings

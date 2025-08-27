@@ -16,6 +16,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Join_Us-blueviolet.svg?logo=discord)](https://discord.gg/eYMpfnkG8h)
 [![DingTalk](https://img.shields.io/badge/DingTalk-Join_Us-orange.svg)](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11)
 
+[[Cookbook]](https://runtime.agentscope.io/)
 [[中文README]](README_zh.md)
 
 **A Production-Ready Runtime Framework for Intelligent Agent Applications**
@@ -154,7 +155,7 @@ with BaseSandbox() as box:
 
 > [!NOTE]
 >
-> Current version requires Docker to be installed and running on your system. In the future, we will provide Kubernetes deployment and public cloud deployment options. Please refer to [this tutorial](https://runtime.agentscope.io/en/sandbox.html) for more details.
+> Current version requires Docker or Kubernetes to be installed and running on your system. Please refer to [this tutorial](https://runtime.agentscope.io/en/sandbox.html) for more details.
 
 ---
 
@@ -164,6 +165,7 @@ with BaseSandbox() as box:
 - **[💡 Concept](https://runtime.agentscope.io/en/concept.html)**: Core concepts and architecture overview
 - **[🚀 Quick Start](https://runtime.agentscope.io/en/quickstart.html)**: Quick start tutorial
 - **[🏠 Demo House](https://runtime.agentscope.io/en/demohouse.html)**: Rich example projects
+- **[📋 API Reference](https://runtime.agentscope.io/en/api/index.html)**: Complete API documentation
 
 ---
 
@@ -172,6 +174,7 @@ with BaseSandbox() as box:
 ### AgentScope Integration
 
 ```python
+# pip install "agentscope-runtime[agentscope]"
 import os
 
 from agentscope.agent import ReActAgent
@@ -194,6 +197,7 @@ agent = AgentScopeAgent(
 ### Agno Integration
 
 ```python
+# pip install "agentscope-runtime[agno]"
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from agentscope_runtime.engine.agents.agno_agent import AgnoAgent
@@ -210,9 +214,30 @@ agent = AgnoAgent(
 )
 ```
 
+### AutoGen Integration
+
+```python
+# pip install "agentscope-runtime[autogen]"
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+from agentscope_runtime.engine.agents.autogen_agent import AutogenAgent
+
+agent = AutogenAgent(
+    name="Friday",
+    model=OpenAIChatCompletionClient(
+        model="gpt-4",
+    ),
+    agent_config={
+        "system_message": "You're a helpful assistant",
+    },
+    agent_builder=AssistantAgent,
+)
+```
+
 ### LangGraph Integration
 
 ```python
+# pip install "agentscope-runtime[langgraph]"
 from typing import TypedDict
 from langgraph import graph, types
 from agentscope_runtime.engine.agents.langgraph_agent import LangGraphAgent

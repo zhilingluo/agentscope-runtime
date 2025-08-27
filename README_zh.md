@@ -16,6 +16,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Join_Us-blueviolet.svg?logo=discord)](https://discord.gg/eYMpfnkG8h)
 [![DingTalk](https://img.shields.io/badge/DingTalk-Join_Us-orange.svg)](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11)
 
+[[Cookbook]](https://runtime.agentscope.io/)
 [[English README]](README.md)
 
 **智能体应用的生产就绪运行时框架**
@@ -151,7 +152,7 @@ with BaseSandbox() as box:
 
 > [!NOTE]
 >
-> 当前版本需要安装并运行Docker，未来我们将提供Kubernetes部署和公有云部署选项。请参考[此教程](https://runtime.agentscope.io/zh/sandbox.html)了解更多详情。
+> 当前版本需要安装并运行Docker或者Kubernetes，未来我们将提供更多公有云部署选项。请参考[此教程](https://runtime.agentscope.io/zh/sandbox.html)了解更多详情。
 
 ---
 
@@ -161,6 +162,7 @@ with BaseSandbox() as box:
 - **[💡 概念](https://runtime.agentscope.io/zh/concept.html)**: 核心概念和架构概述
 - **[🚀 快速开始](https://runtime.agentscope.io/zh/quickstart.html)**: 快速入门教程
 - **[🏠 展示厅](https://runtime.agentscope.io/zh/demohouse.html)**: 丰富的示例项目
+- **[📋 API 参考](https://runtime.agentscope.io/zh/api/index.html)**: 完整的API文档
 
 ---
 
@@ -169,6 +171,7 @@ with BaseSandbox() as box:
 ### AgentScope 集成
 
 ```python
+# pip install "agentscope-runtime[agentscope]"
 import os
 
 from agentscope.agent import ReActAgent
@@ -191,6 +194,7 @@ agent = AgentScopeAgent(
 ### Agno集成
 
 ```python
+# pip install "agentscope-runtime[agno]"
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from agentscope_runtime.engine.agents.agno_agent import AgnoAgent
@@ -207,9 +211,30 @@ agent = AgnoAgent(
 )
 ```
 
+### AutoGen集成
+
+```python
+# pip install "agentscope-runtime[autogen]"
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+from agentscope_runtime.engine.agents.autogen_agent import AutogenAgent
+
+agent = AutogenAgent(
+    name="Friday",
+    model=OpenAIChatCompletionClient(
+        model="gpt-4",
+    ),
+    agent_config={
+        "system_message": "You're a helpful assistant",
+    },
+    agent_builder=AssistantAgent,
+)
+```
+
 ### LangGraph集成
 
 ```python
+# pip install "agentscope-runtime[langgraph]"
 from typing import TypedDict
 from langgraph import graph, types
 from agentscope_runtime.engine.agents.langgraph_agent import LangGraphAgent
