@@ -599,7 +599,10 @@ class SandboxManager:
         enable_browser = "browser" in container_model.version
 
         # TODO: remake docker name
-        if "appworld" in container_model.version:
+        if (
+            "sandbox-appworld" in container_model.version
+            or "sandbox-bfcl" in container_model.version
+        ):
             return TrainingSandboxClient(
                 base_url=f"http://localhost:{container_model.ports[0]}",
             ).__enter__()
