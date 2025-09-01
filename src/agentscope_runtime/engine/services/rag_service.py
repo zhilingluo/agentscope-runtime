@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from typing import Optional
 
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_milvus import Milvus
@@ -41,7 +42,11 @@ class LangChainRAGService(RAGService):
     RAG Service using LangChain
     """
 
-    def __init__(self, uri=None, docs=None):
+    def __init__(
+        self,
+        uri: Optional[str] = None,
+        docs: Optional[list[str]] = None,
+    ):
         self.embeddings = DashScopeEmbeddings()
         self.vectorstore = None
 
