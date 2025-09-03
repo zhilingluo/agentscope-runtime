@@ -65,13 +65,178 @@ The `RAGService` is a basic class to provide retrieval augmented generation (RAG
 When asked by an end-user, the agent may need to retrieve relevant information from the knowledge base.
 The knowledge base can be a database or a collection of documents.
 The `RAGService` contains the following methods:
-- `retrieve`: retrieve relevant information from the knowledge base
+- `retrieve`: retrieve relevant information from the knowledge base.
 
-The `LangChainRAGService` is a concrete implementation of `RAGService` that uses LangChain to retrieve relevant information from Milvus.
+The `LangChainRAGService` is a concrete implementation of `RAGService` that uses LangChain to retrieve relevant information.
 It can be initialized by:
-- `uri` the Milvus URI, either a local file (`.\xxx.db`) or a remote URL (`http://localhost:19530`).
-- `docs` the documents to be indexed.
+- `vectorstore` the vectorstore to be indexed. Specifically, it can be a `VectorStore` instance of LangChain.
+- `embedding` the embedding model to be used for indexing.
 
+Here is a simple example to read the doc from a website and use it to retrieve relevant information. You need install `agentscope-runtime[langchain_rag]`
+1. Load documents from by website reader and split them into chucks.
+```python
+import bs4
+from langchain_community.document_loaders import WebBaseLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+loader = WebBaseLoader(
+    web_paths=(
+        "https://lilianweng.github.io/posts/2023-06-23-agent/",
+        "https://lilianweng.github.io/posts/2023-03-15-prompt"
+        "-engineering/",
+    ),
+    bs_kwargs={
+        "parse_only": bs4.SoupStrainer(
+            class_=("post-content", "post-title", "post-header"),
+        ),
+    },
+)
+documents = loader.load()
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=2000,
+    chunk_overlap=200,
+)
+
+docs = text_splitter.split_documents(documents)
+```
+2. Initialize the rag_service by indexing the documents and store it in Milvus. In this example, we use a local file `milvus_demo.db`. We use DashscopeEmbeddings as the embedding model which requires the dashscope key in the envronment.
+```python
+from langchain_milvus import Milvus
+from langchain_community.embeddings import DashScopeEmbeddings
+from agentscope_runtime.engine.services.rag_service import LangChainRAGService
+
+# langchain+Milvus
+rag_service = LangChainRAGService(
+    vectorstore=Milvus.from_documents(
+        documents=docs,
+        embedding=DashScopeEmbeddings(),
+        connection_args={
+            "uri": "milvus_demo.db",
+        },
+    ),
+    embedding=DashScopeEmbeddings(),
+)
+```
+3. Use the rag_service directly. It can be used to retrieve relevant information from the knowledge base. The results are returned as a list of documents.
+```python
+ret_docs = await rag_service.retrieve(
+    "What is self-reflection of an AI Agent?",
+)
+```
+
+4. The rag_service can be integrated in the agent runtime through the context manager.
+```python
+from agentscope_runtime.engine import Runner
+from agentscope_runtime.engine.agents.llm_agent import LLMAgent
+from agentscope_runtime.engine.llms import QwenLLM
+from agentscope_runtime.engine.schemas.agent_schemas import (
+    MessageType,
+    AgentRequest,
+    RunStatus,
+)
+from agentscope_runtime.engine.services.context_manager import (
+    create_context_manager,
+)
+USER_ID = "user1"
+SESSION_ID = "session1"
+query = "What is self-reflection of an AI Agent?"
+
+llm_agent = LLMAgent(
+    model=QwenLLM(),
+    name="llm_agent",
+    description="A simple LLM agent",
+)
+
+async with create_context_manager(
+    rag_service=rag_service,
+) as context_manager:
+    runner = Runner(
+        agent=llm_agent,
+        context_manager=context_manager,
+        environment_manager=None,
+    )
+
+    all_result = ""
+    request = AgentRequest(
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": query,
+                    },
+                ],
+            },
+        ],
+        session_id=SESSION_ID,
+    )
+
+    async for message in runner.stream_query(
+        user_id=USER_ID,
+        request=request,
+    ):
+        if (
+            message.object == "message"
+            and MessageType.MESSAGE == message.type
+            and RunStatus.Completed == message.status
+        ):
+            all_result = message.content[0].text
+    print(all_result)
+```
+
+`LlamaIndexRAGService` is another concrete implementation of `RAGService` that uses LlamaIndex to retrieve relevant information. To use it, you need install `agentscope-runtime[llamaindex_rag]`. Here is a full example:
+```python
+from llama_index.core.schema import Document
+from llama_index.readers.web import SimpleWebPageReader
+from llama_index.core.node_parser import SentenceSplitter
+from langchain_community.embeddings import DashScopeEmbeddings
+from llama_index.core import VectorStoreIndex, StorageContext
+from llama_index.vector_stores.milvus import MilvusVectorStore
+from llama_index.core import Settings
+
+from agentscope_runtime.engine.services.rag_service import   LlamaIndexRAGService
+
+# llamaindex+Milvus
+
+# Load documents from web pages
+loader = SimpleWebPageReader()
+documents = loader.load_data(
+    urls=[
+        "https://lilianweng.github.io/posts/2023-06-23-agent/",
+        "https://lilianweng.github.io/posts/2023-03-15-prompt-"
+        "engineering/",
+    ],
+)
+
+# Split documents into nodes
+splitter = SentenceSplitter(chunk_size=2000, chunk_overlap=200)
+nodes = splitter.get_nodes_from_documents(documents)
+
+# Convert nodes to documents
+docs = [Document(text=node.text) for node in nodes]
+
+
+Settings.embed_model = DashScopeEmbeddings()
+vector_store = MilvusVectorStore(
+    uri="milvus_llamaindex_demo.db",
+    dim=1536,
+)
+storage_context = StorageContext.from_defaults(vector_store=vector_store)
+index = VectorStoreIndex.from_documents(
+    documents=docs,
+    storage_context=storage_context,
+)
+rag_service = LlamaIndexRAGService(
+    vectorstore=index,
+    embedding=DashScopeEmbeddings(),
+)
+
+ret_docs = await rag_service.retrieve(
+    "What is self-reflection of an AI Agent?",
+)
+
+```
 
 ## Life-cycle of a context manager
 The context manager can be initialized by two ways:
