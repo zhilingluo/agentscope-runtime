@@ -3,11 +3,11 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="6. Agent API 协议规范" href="protocol.html" /><link rel="prev" title="训练用沙箱" href="training_sandbox.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="9. 执行轨迹追踪" href="tracing.html" /><link rel="prev" title="环境管理器（Environment Manager）" href="environment_manager.html" />
         <link rel="prefetch" href="../_static/logo.svg" as="image" />
 
     <link rel="shortcut icon" href="../_static/logo.svg"/><!-- Generated with Sphinx 7.4.7 and Furo 2025.07.19 -->
-        <title>5. 部署配备工具沙箱的ReAct智能体 - AgentScope Runtime</title>
+        <title>8. RAG - AgentScope Runtime</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d75fae25" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=25af2a20" />
     <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=13237357" />
@@ -357,7 +357,7 @@
 <li class="toctree-l2"><a class="reference internal" href="training_sandbox.html">训练用沙箱</a></li>
 </ul>
 </li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">5. 部署配备工具沙箱的ReAct智能体</a></li>
+<li class="toctree-l1"><a class="reference internal" href="react_agent.html">5. 部署配备工具沙箱的ReAct智能体</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="protocol.html">6. Agent API 协议规范</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of 6. Agent API 协议规范</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="a2a_support.html">A2A 协议支持文档</a></li>
 </ul>
@@ -367,7 +367,7 @@
 <li class="toctree-l2"><a class="reference internal" href="environment_manager.html">环境管理器（Environment Manager）</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="rag.html">8. RAG</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">8. RAG</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tracing.html">9. 执行轨迹追踪</a></li>
 <li class="toctree-l1"><a class="reference internal" href="demohouse.html">10. Demo 展示厅</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="contribute.html">11. 如何贡献</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of 11. 如何贡献</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -401,7 +401,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="https://github.com/agentscope-ai/agentscope-runtime/blob/main/cookbook/zh/react_agent.md?plain=true" title="View this page">
+  <a class="muted-link" href="https://github.com/agentscope-ai/agentscope-runtime/blob/main/cookbook/zh/rag.md?plain=true" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -420,180 +420,156 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="react">
-<h1><span class="section-number">5. </span>部署配备工具沙箱的ReAct智能体<a class="headerlink" href="#react" title="Link to this heading">¶</a></h1>
-<p>本教程演示了如何使用AgentScope Runtime与<a class="reference external" href="https://github.com/modelscope/agentscope"><strong>AgentScope框架</strong></a>创建和部署*”推理与行动”(ReAct)*智能体。</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>ReAct（推理与行动）范式使智能体能够将推理轨迹与特定任务的行动交织在一起，使其在工具交互任务中特别有效。通过将AgentScope的<code class="docutils literal notranslate"><span class="pre">ReActAgent</span></code>与AgentScope Runtime的基础设施相结合，您可以同时获得智能决策和安全的工具执行。</p>
-</div>
+          <section id="rag">
+<h1><span class="section-number">8. </span>RAG<a class="headerlink" href="#rag" title="Link to this heading">¶</a></h1>
 <section id="id1">
-<h2>前置要求<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<h2>概述<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<p>本文档介绍了如何使用Agentscope-runtime构建一个RAG代理。</p>
+<p>你可以学习到：</p>
+<ol class="arabic simple">
+<li><p>如何通过Agenscope-runtime+LangChain+Milvus构建一个完整的RAG代理。</p></li>
+<li><p>如何使用Llamaindex作为LangChain的替代方案。</p></li>
+<li><p>如何使用FAISS/Chroma/Pinecone/Weaviate作为Milvus的替代方案。</p></li>
+</ol>
+<p>Agentscope-runtime包含一个轻量级的服务，称为RAGService，它</p>
+<ol class="arabic simple">
+<li><p>提供检索功能；</p></li>
+<li><p>通过上下文管理器集成。</p></li>
+</ol>
+<p>它不包含以下功能：</p>
+<ol class="arabic simple">
+<li><p>处理文档的能力；</p></li>
+<li><p>索引文档的能力；</p></li>
+<li><p>知识库的存储。</p></li>
+</ol>
+<p>我们建议使用流行的框架（例如Langchain）和数据库（例如FAISS）来完成任务。在大多数情况下，我们将使用LangChain和Milvus。</p>
+<p>本文档的其余部分包含以下内容：</p>
+<ul class="simple">
+<li><p>前提条件：所需的所有要求；</p></li>
+<li><p>文档准备；</p></li>
+<li><p>构建向量存储索引；</p></li>
+<li><p>构建rag_service；</p></li>
+<li><p>构建rag代理。</p></li>
+<li><p>如何使用LlamaIndex。</p></li>
+<li><p>如何使用其他数据库。</p></li>
+</ul>
 <section id="id2">
-<h3>🔧 安装要求<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
-<p>安装带有必需依赖项的AgentScope Runtime：</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;agentscope-runtime[sandbox,agentscope]&quot;</span>
-</pre></div>
-</div>
-</section>
-<section id="sandbox-setup">
-<h3>🐳 Sandbox Setup<a class="headerlink" href="#sandbox-setup" title="Link to this heading">¶</a></h3>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>确保您的浏览器沙箱环境已准备好使用，详细信息请参见<a class="reference internal" href="sandbox.html"><span class="doc">工具沙箱</span></a>。</p>
-</div>
-<p>确保浏览器沙箱镜像可用：</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>pull<span class="w"> </span>agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>docker<span class="w"> </span>tag<span class="w"> </span>agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest<span class="w"> </span>agentscope/runtime-sandbox-browser:latest
-</pre></div>
-</div>
-</section>
-<section id="api">
-<h3>🔑 API密钥配置<a class="headerlink" href="#api" title="Link to this heading">¶</a></h3>
-<p>您需要为您选择的LLM提供商准备API密钥。此示例使用DashScope（Qwen），但您可以将其适配到其他提供商：</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">DASHSCOPE_API_KEY</span><span class="o">=</span><span class="s2">&quot;your_api_key_here&quot;</span>
-</pre></div>
-</div>
-</section>
+<h3>前提条件<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<p>有一些前提条件：</p>
+<ol class="arabic simple">
+<li><p>DashScope的密钥：用于访问Qwen模型和嵌入模型的DashScope API。该密钥应设置在环境变量<code class="docutils literal notranslate"><span class="pre">DASHSCOPE_API_KEY</span></code>中。</p></li>
+<li><p>安装依赖项：<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">agentscope-runtime[langchain_rag]</span></code>。如果使用llamaindex，则需要安装<code class="docutils literal notranslate"><span class="pre">agentscope-runtime[llamaindex_rag]</span></code>。</p></li>
+</ol>
 </section>
 <section id="id3">
-<h2>分步实现<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h2>
+<h3>文档准备<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<p>文档可以从多种来源加载，包括网站、PDF和其他格式。请参阅Langchain的API以了解如何从各种来源加载文档。这里，我们从网站加载文档。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">bs4</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_community.document_loaders</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebBaseLoader</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_text_splitters</span><span class="w"> </span><span class="kn">import</span> <span class="n">RecursiveCharacterTextSplitter</span>
+
+<span class="n">loader</span> <span class="o">=</span> <span class="n">WebBaseLoader</span><span class="p">(</span>
+    <span class="n">web_paths</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;https://lilianweng.github.io/posts/2023-06-23-agent/&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;https://lilianweng.github.io/posts/2023-03-15-prompt&quot;</span>
+        <span class="s2">&quot;-engineering/&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">bs_kwargs</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;parse_only&quot;</span><span class="p">:</span> <span class="n">bs4</span><span class="o">.</span><span class="n">SoupStrainer</span><span class="p">(</span>
+            <span class="n">class_</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;post-content&quot;</span><span class="p">,</span> <span class="s2">&quot;post-title&quot;</span><span class="p">,</span> <span class="s2">&quot;post-header&quot;</span><span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+<span class="n">documents</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+<span class="n">text_splitter</span> <span class="o">=</span> <span class="n">RecursiveCharacterTextSplitter</span><span class="p">(</span>
+    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
+    <span class="n">chunk_overlap</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">docs</span> <span class="o">=</span> <span class="n">text_splitter</span><span class="o">.</span><span class="n">split_documents</span><span class="p">(</span><span class="n">documents</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>在这段代码中，我们使用支持bs4解析网站的<code class="docutils literal notranslate"><span class="pre">WebBaseLoader</span></code>收集网站内容。然后我们将文档分割成块，块大小为2000，重叠为200。<code class="docutils literal notranslate"><span class="pre">RecursiveCharacterTextSplitter</span></code>是Langchain中的文本分割器，可以将文本分割成指定大小的块。分割后的文档存储在<code class="docutils literal notranslate"><span class="pre">docs</span></code>变量中。</p>
+</section>
 <section id="id4">
-<h3>步骤1：导入依赖项<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
-<p>首先导入所有必要的模块：</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">asynccontextmanager</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">Runner</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.agents.agentscope_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentScopeAgent</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.services.context_manager</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">ContextManager</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.services.environment_manager</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">EnvironmentManager</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.schemas.agent_schemas</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">MessageType</span><span class="p">,</span>
-    <span class="n">RunStatus</span><span class="p">,</span>
-    <span class="n">AgentRequest</span><span class="p">,</span>
+<h3>构建向量存储索引<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<p>文档需要被索引并存储在向量存储中。在Langchain中，它支持许多向量存储，包括Milvus、Chroma和Pinecone。在这个例子中，我们使用Milvus作为向量存储。嵌入模型用于嵌入文档并将它们存储在向量存储中。Langchain还支持许多嵌入模型，包括OpenAI、HuggingFace和DashScope。我们使用DashScopeEmbeddings作为嵌入模型。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">langchain_milvus</span><span class="w"> </span><span class="kn">import</span> <span class="n">Milvus</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_community.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeEmbeddings</span>
+<span class="n">vectorstore</span><span class="o">=</span><span class="n">Milvus</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span>
+    <span class="n">documents</span><span class="o">=</span><span class="n">docs</span><span class="p">,</span>
+    <span class="n">embedding</span><span class="o">=</span><span class="n">DashScopeEmbeddings</span><span class="p">(),</span>
+    <span class="n">connection_args</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;uri&quot;</span><span class="p">:</span> <span class="s2">&quot;milvus_demo.db&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+<span class="p">),</span>
+</pre></div>
+</div>
+<p>在这段代码中，我们通过其<code class="docutils literal notranslate"><span class="pre">from_documents</span></code>初始化了一个Milvus向量存储。连接参数是Milvus数据库的路径。更多详细信息，请参阅<a class="reference external" href="https://milvus.io/docs/">Milvus文档</a>。这里我们使用一个本地数据库文件（<code class="docutils literal notranslate"><span class="pre">milvus_demo.db</span></code>）。</p>
+</section>
+<section id="rag-service">
+<h3>构建rag_service<a class="headerlink" href="#rag-service" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">RAGService</span></code>是一个提供检索增强生成（RAG）能力的基本类。当终端用户询问时，代理可能需要从知识库中检索相关信息。知识库可以是数据库或文档集合。<code class="docutils literal notranslate"><span class="pre">RAGService</span></code>包含以下方法：</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">retrieve</span></code>：从知识库中检索相关信息。</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">LangChainRAGService</span></code>是<code class="docutils literal notranslate"><span class="pre">RAGService</span></code>的一个具体实现，它使用LangChain来检索相关信息。可以通过以下方式初始化：</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">vectorstore</span></code> 要索引的向量存储。特别是，它可以是LangChain的<code class="docutils literal notranslate"><span class="pre">VectorStore</span></code>实例。</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">embedding</span></code> 用于索引的嵌入模型。</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">langchain_milvus</span><span class="w"> </span><span class="kn">import</span> <span class="n">Milvus</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_community.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeEmbeddings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.services.rag_service</span><span class="w"> </span><span class="kn">import</span> <span class="n">LangChainRAGService</span>
+
+<span class="c1"># langchain+Milvus</span>
+<span class="n">rag_service</span> <span class="o">=</span> <span class="n">LangChainRAGService</span><span class="p">(</span>
+    <span class="n">vectorstore</span><span class="o">=</span><span class="n">vectorstore</span><span class="p">,</span>
+    <span class="n">embedding</span><span class="o">=</span><span class="n">DashScopeEmbeddings</span><span class="p">()</span>
 <span class="p">)</span>
 </pre></div>
 </div>
-</div>
+<p>在这段代码中，我们通过其<code class="docutils literal notranslate"><span class="pre">vectorstore</span></code>和<code class="docutils literal notranslate"><span class="pre">embedding</span></code>初始化了一个<code class="docutils literal notranslate"><span class="pre">LangChainRAGService</span></code>。我们可以直接使用rag_service。它可以用来从知识库中检索相关信息。结果以文档列表的形式返回。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ret_docs</span> <span class="o">=</span> <span class="k">await</span> <span class="n">rag_service</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span>
+    <span class="s2">&quot;What is self-reflection of an AI Agent?&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
 </div>
 </section>
 <section id="id5">
-<h3>步骤2：配置浏览器工具<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
-<p>定义您的智能体可访问的浏览器工具：</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.sandbox.tools.browser</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">browser_navigate</span><span class="p">,</span>
-    <span class="n">browser_take_screenshot</span><span class="p">,</span>
-    <span class="n">browser_snapshot</span><span class="p">,</span>
-    <span class="n">browser_click</span><span class="p">,</span>
-    <span class="n">browser_type</span><span class="p">,</span>
+<h3>构建rag代理<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<p>在Agentscope-runtime中，rag_service集成在上下文管理器中。它组合了来自内存、会话和rag的所有数据到上下文中。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">Runner</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.agents.llm_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMAgent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.llms</span><span class="w"> </span><span class="kn">import</span> <span class="n">QwenLLM</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.schemas.agent_schemas</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">MessageType</span><span class="p">,</span>
+    <span class="n">AgentRequest</span><span class="p">,</span>
+    <span class="n">RunStatus</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.services.context_manager</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">create_context_manager</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">USER_ID</span> <span class="o">=</span> <span class="s2">&quot;user1&quot;</span>
+<span class="n">SESSION_ID</span> <span class="o">=</span> <span class="s2">&quot;session1&quot;</span>
+<span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;What is self-reflection of an AI Agent?&quot;</span>
+
+<span class="n">llm_agent</span> <span class="o">=</span> <span class="n">LLMAgent</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">QwenLLM</span><span class="p">(),</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;llm_agent&quot;</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A simple LLM agent&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="c1"># Prepare browser tools</span>
-<span class="n">BROWSER_TOOLS</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">browser_navigate</span><span class="p">,</span>
-    <span class="n">browser_take_screenshot</span><span class="p">,</span>
-    <span class="n">browser_snapshot</span><span class="p">,</span><span class="n">browser_click</span><span class="p">,</span>
-    <span class="n">browser_type</span><span class="p">,</span>
-<span class="p">]</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">create_context_manager</span><span class="p">(</span>
+    <span class="n">rag_service</span><span class="o">=</span><span class="n">rag_service</span><span class="p">,</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">context_manager</span><span class="p">:</span>
+    <span class="n">runner</span> <span class="o">=</span> <span class="n">Runner</span><span class="p">(</span>
+        <span class="n">agent</span><span class="o">=</span><span class="n">llm_agent</span><span class="p">,</span>
+        <span class="n">context_manager</span><span class="o">=</span><span class="n">context_manager</span><span class="p">,</span>
+        <span class="n">environment_manager</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ 已配置</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">BROWSER_TOOLS</span><span class="p">)</span><span class="si">}</span><span class="s2"> 个浏览器工具&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-</section>
-<section id="id6">
-<h3>步骤3：定义系统提示词<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
-<p>创建一个系统提示词，为您的智能体建立角色、目标和网页浏览任务的操作指南：</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">SYSTEM_PROMPT</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;You are a Web-Using AI assistant.</span>
-
-<span class="s2"># Objective</span>
-<span class="s2">Your goal is to complete given tasks by controlling a browser to navigate web pages.</span>
-
-<span class="s2">## Web Browsing Guidelines</span>
-<span class="s2">- Use the `browser_navigate` command to jump to specific webpages when needed.</span>
-<span class="s2">- Use `generate_response` to answer the user once you have all the required information.</span>
-<span class="s2">- Always answer in English.</span>
-
-<span class="s2">### Observing Guidelines</span>
-<span class="s2">- Always take action based on the elements on the webpage. Never create URLs or generate new pages.</span>
-<span class="s2">- If the webpage is blank or an error, such as 404, is found, try refreshing it or go back to the previous page and find another webpage.</span>
-<span class="s2">&quot;&quot;&quot;</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;✅系统提示词已配置&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-</section>
-<section id="step-4">
-<h3>Step 4: 初始化智能体和模型<a class="headerlink" href="#step-4" title="Link to this heading">¶</a></h3>
-<p>使用AgentScope框架中您选择的大模型设置ReAct智能体构建器：</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">agentscope.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReActAgent</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeChatModel</span>
-
-<span class="c1"># Initialize the language model</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">DashScopeChatModel</span><span class="p">(</span>
-    <span class="s2">&quot;qwen-max&quot;</span><span class="p">,</span>
-    <span class="n">api_key</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;DASHSCOPE_API_KEY&quot;</span><span class="p">),</span>
-<span class="p">)</span>
-
-<span class="c1"># Create the AgentScope agent</span>
-<span class="n">agent</span> <span class="o">=</span> <span class="n">AgentScopeAgent</span><span class="p">(</span>
-    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Friday&quot;</span><span class="p">,</span>
-    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
-    <span class="n">agent_config</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">&quot;sys_prompt&quot;</span><span class="p">:</span> <span class="n">SYSTEM_PROMPT</span><span class="p">,</span>
-    <span class="p">},</span>
-    <span class="n">tools</span><span class="o">=</span><span class="n">BROWSER_TOOLS</span><span class="p">,</span>
-    <span class="n">agent_builder</span><span class="o">=</span><span class="n">ReActAgent</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;✅ 智能体初始化成功&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-</section>
-<section id="step-5">
-<h3>Step 5: 创建运行器<a class="headerlink" href="#step-5" title="Link to this heading">¶</a></h3>
-<p>通过创建一个运行器来建立运行时，该运行器协调智能体和用于会话管理、内存和环境控制的基本服务：</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@asynccontextmanager</span>
-<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_runner</span><span class="p">():</span>
-    <span class="k">async</span> <span class="k">with</span> <span class="n">ContextManager</span><span class="p">()</span> <span class="k">as</span> <span class="n">context_manager</span><span class="p">:</span>
-        <span class="k">async</span> <span class="k">with</span> <span class="n">EnvironmentManager</span><span class="p">()</span> <span class="k">as</span> <span class="n">env_manager</span><span class="p">:</span>
-            <span class="n">runner</span> <span class="o">=</span> <span class="n">Runner</span><span class="p">(</span>
-                <span class="n">agent</span><span class="o">=</span><span class="n">agent</span><span class="p">,</span>
-                <span class="n">context_manager</span><span class="o">=</span><span class="n">context_manager</span><span class="p">,</span>
-                <span class="n">environment_manager</span><span class="o">=</span><span class="n">env_manager</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;✅ 运行器创建成功&quot;</span><span class="p">)</span>
-            <span class="k">yield</span> <span class="n">runner</span>
-</pre></div>
-</div>
-</div>
-</div>
-</section>
-<section id="id7">
-<h3>步骤6：定义本地交互函数<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
-<p>实现本地交互函数，通过直接查询处理和流式响应来测试您的智能体功能：</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">interact</span><span class="p">(</span><span class="n">runner</span><span class="p">):</span>
-    <span class="c1"># Create a request</span>
+    <span class="n">all_result</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="n">request</span> <span class="o">=</span> <span class="n">AgentRequest</span><span class="p">(</span>
         <span class="nb">input</span><span class="o">=</span><span class="p">[</span>
             <span class="p">{</span>
@@ -601,94 +577,138 @@
                 <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="p">[</span>
                     <span class="p">{</span>
                         <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;What is in example.com?&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span>
                     <span class="p">},</span>
                 <span class="p">],</span>
             <span class="p">},</span>
         <span class="p">],</span>
+        <span class="n">session_id</span><span class="o">=</span><span class="n">SESSION_ID</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="c1"># Stream interaction with the agent</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;🤖 智能体正在处理您的请求...&quot;</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">runner</span><span class="o">.</span><span class="n">stream_query</span><span class="p">(</span>
+        <span class="n">user_id</span><span class="o">=</span><span class="n">USER_ID</span><span class="p">,</span>
         <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="c1"># Check if this is a completed message</span>
         <span class="k">if</span> <span class="p">(</span>
             <span class="n">message</span><span class="o">.</span><span class="n">object</span> <span class="o">==</span> <span class="s2">&quot;message&quot;</span>
             <span class="ow">and</span> <span class="n">MessageType</span><span class="o">.</span><span class="n">MESSAGE</span> <span class="o">==</span> <span class="n">message</span><span class="o">.</span><span class="n">type</span>
             <span class="ow">and</span> <span class="n">RunStatus</span><span class="o">.</span><span class="n">Completed</span> <span class="o">==</span> <span class="n">message</span><span class="o">.</span><span class="n">status</span>
         <span class="p">):</span>
             <span class="n">all_result</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span>
-
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;📝 智能体输出:&quot;</span><span class="p">,</span> <span class="n">all_result</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">all_result</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</div>
+<p>在这段代码中，我们引入了一个简单的代理，并借助上下文管理器构建了一个运行器。</p>
 </section>
-<section id="id8">
-<h3>步骤7：运行交互<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
-<p>执行交互流程，在本地开发环境中测试您的智能体功能：</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">interact_run</span><span class="p">():</span>
-    <span class="k">async</span> <span class="k">with</span> <span class="n">create_runner</span><span class="p">()</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
-        <span class="k">await</span> <span class="n">interact</span><span class="p">(</span><span class="n">runner</span><span class="p">)</span>
+<section id="llamaindex">
+<h3>如何使用LlamaIndex<a class="headerlink" href="#llamaindex" title="Link to this heading">¶</a></h3>
+<p>LlamaIndex是一个强大的工具包，用于构建大型语言模型应用程序。它提供了多种工具来构建和查询索引，包括向量存储、文本分割器和查询引擎。在Agentscope-runtime中，我们提供了一个<code class="docutils literal notranslate"><span class="pre">LlamaIndexRAGService</span></code>来将LlamaIndex集成到Agentscope-runtime中。要使用它，你需要安装<code class="docutils literal notranslate"><span class="pre">agentscope-runtime[llamaindex_rag]</span></code>。这是一个完整的示例：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.core.schema</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.readers.web</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleWebPageReader</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.core.node_parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">SentenceSplitter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_community.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeEmbeddings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">VectorStoreIndex</span><span class="p">,</span> <span class="n">StorageContext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.vector_stores.milvus</span><span class="w"> </span><span class="kn">import</span> <span class="n">MilvusVectorStore</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">Settings</span>
 
-<span class="k">await</span> <span class="n">interact_run</span><span class="p">()</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.services.rag_service</span><span class="w"> </span><span class="kn">import</span>   <span class="n">LlamaIndexRAGService</span>
+
+<span class="c1"># llamaindex+Milvus</span>
+
+<span class="c1"># 从网页加载文档</span>
+<span class="n">loader</span> <span class="o">=</span> <span class="n">SimpleWebPageReader</span><span class="p">()</span>
+<span class="n">documents</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_data</span><span class="p">(</span>
+    <span class="n">urls</span><span class="o">=</span><span class="p">[</span>
+        <span class="s2">&quot;https://lilianweng.github.io/posts/2023-06-23-agent/&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;https://lilianweng.github.io/posts/2023-03-15-prompt-&quot;</span>
+        <span class="s2">&quot;engineering/&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+<span class="c1"># 将文档分割成节点</span>
+<span class="n">splitter</span> <span class="o">=</span> <span class="n">SentenceSplitter</span><span class="p">(</span><span class="n">chunk_size</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">chunk_overlap</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">nodes</span> <span class="o">=</span> <span class="n">splitter</span><span class="o">.</span><span class="n">get_nodes_from_documents</span><span class="p">(</span><span class="n">documents</span><span class="p">)</span>
+
+<span class="c1"># 将节点转换为文档</span>
+<span class="n">docs</span> <span class="o">=</span> <span class="p">[</span><span class="n">Document</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]</span>
+
+
+<span class="n">Settings</span><span class="o">.</span><span class="n">embed_model</span> <span class="o">=</span> <span class="n">DashScopeEmbeddings</span><span class="p">()</span>
+<span class="n">vector_store</span> <span class="o">=</span> <span class="n">MilvusVectorStore</span><span class="p">(</span>
+    <span class="n">uri</span><span class="o">=</span><span class="s2">&quot;milvus_llamaindex_demo.db&quot;</span><span class="p">,</span>
+    <span class="n">dim</span><span class="o">=</span><span class="mi">1536</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">storage_context</span> <span class="o">=</span> <span class="n">StorageContext</span><span class="o">.</span><span class="n">from_defaults</span><span class="p">(</span><span class="n">vector_store</span><span class="o">=</span><span class="n">vector_store</span><span class="p">)</span>
+<span class="n">index</span> <span class="o">=</span> <span class="n">VectorStoreIndex</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span>
+    <span class="n">documents</span><span class="o">=</span><span class="n">docs</span><span class="p">,</span>
+    <span class="n">storage_context</span><span class="o">=</span><span class="n">storage_context</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">rag_service</span> <span class="o">=</span> <span class="n">LlamaIndexRAGService</span><span class="p">(</span>
+    <span class="n">vectorstore</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+    <span class="n">embedding</span><span class="o">=</span><span class="n">DashScopeEmbeddings</span><span class="p">(),</span>
+<span class="p">)</span>
+
+<span class="n">ret_docs</span> <span class="o">=</span> <span class="k">await</span> <span class="n">rag_service</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span>
+    <span class="s2">&quot;What is self-reflection of an AI Agent?&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
-</div>
-</div>
 </section>
-<section id="id9">
-<h3>步骤8：本地部署智能体<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
-<p>使用本地部署管理器将您的智能体转换为生产就绪的服务，以提供HTTP API访问：</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.deployers</span><span class="w"> </span><span class="kn">import</span> <span class="n">LocalDeployManager</span>
-
-<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">deploy</span><span class="p">(</span><span class="n">runner</span><span class="p">):</span>
-    <span class="c1"># 创建部署管理器</span>
-    <span class="n">deploy_manager</span> <span class="o">=</span> <span class="n">LocalDeployManager</span><span class="p">(</span>
-        <span class="n">host</span><span class="o">=</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span>
-        <span class="n">port</span><span class="o">=</span><span class="mi">8090</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="c1">#将智能体部署为流式服务</span>
-    <span class="n">deploy_result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">runner</span><span class="o">.</span><span class="n">deploy</span><span class="p">(</span>
-        <span class="n">deploy_manager</span><span class="o">=</span><span class="n">deploy_manager</span><span class="p">,</span>
-        <span class="n">endpoint_path</span><span class="o">=</span><span class="s2">&quot;/process&quot;</span><span class="p">,</span>
-        <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Enable streaming responses</span>
-    <span class="p">)</span>
-
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;智能体部署在: </span><span class="si">{</span><span class="n">deploy_result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;服务URL: </span><span class="si">{</span><span class="n">deploy_manager</span><span class="o">.</span><span class="n">service_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;健康检查: </span><span class="si">{</span><span class="n">deploy_manager</span><span class="o">.</span><span class="n">service_url</span><span class="si">}</span><span class="s2">/health&quot;</span><span class="p">)</span>
+<section id="id6">
+<h3>如何使用其他数据库<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
+<p>Agentscope-runtime支持几种向量数据库。</p>
+<ol class="arabic simple">
+<li><p>FAISS</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">langchain.vectorstores</span><span class="w"> </span><span class="kn">import</span> <span class="n">FAISS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeEmbeddings</span>
+<span class="n">vectorstore</span> <span class="o">=</span> <span class="n">FAISS</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">DashScopeEmbeddings</span><span class="p">())</span>
 </pre></div>
 </div>
-</div>
-</div>
-</section>
-<section id="id10">
-<h3>步骤9：运行部署<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h3>
-<p>执行完整的部署过程，使您的智能体作为Web服务可用：</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">deploy_run</span><span class="p">():</span>
-    <span class="k">async</span> <span class="k">with</span> <span class="n">create_runner</span><span class="p">()</span> <span class="k">as</span> <span class="n">runner</span><span class="p">:</span>
-        <span class="k">await</span> <span class="n">deploy</span><span class="p">(</span><span class="n">runner</span><span class="p">)</span>
-
-<span class="k">await</span> <span class="n">deploy_run</span><span class="p">()</span>
+<ol class="arabic simple" start="2">
+<li><p>Chroma</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">langchain.vectorstores</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chroma</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeEmbeddings</span>
+<span class="n">vectorstore</span> <span class="o">=</span> <span class="n">Chroma</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">DashScopeEmbeddings</span><span class="p">())</span>
 </pre></div>
 </div>
+<ol class="arabic simple" start="3">
+<li><p>Weaviate</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">weaviate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain.vectorstores</span><span class="w"> </span><span class="kn">import</span> <span class="n">Weaviate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeEmbeddings</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">weaviate</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="s2">&quot;http://localhost:8080&quot;</span><span class="p">)</span>  <span class="c1"># URI</span>
+<span class="n">class_name</span> <span class="o">=</span> <span class="s2">&quot;YourClassName&quot;</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">client</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">class_name</span><span class="p">):</span>
+    <span class="n">class_obj</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;class&quot;</span><span class="p">:</span> <span class="n">class_name</span><span class="p">,</span>
+        <span class="s2">&quot;vectorizer&quot;</span><span class="p">:</span> <span class="s2">&quot;none&quot;</span>
+    <span class="p">}</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">create_class</span><span class="p">(</span><span class="n">class_obj</span><span class="p">)</span>
+<span class="n">vectorstore</span> <span class="o">=</span> <span class="n">Weaviate</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">DashScopeEmbeddings</span><span class="p">(),</span> <span class="n">client</span><span class="p">,</span> <span class="n">class_name</span><span class="p">)</span>
+</pre></div>
 </div>
+<ol class="arabic simple" start="4">
+<li><p>Pinecone</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pinecone</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain.vectorstores</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pinecone</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeEmbeddings</span>
+
+<span class="n">pinecone</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;YOUR_PINECONE_API_KEY&quot;</span><span class="p">,</span> <span class="n">environment</span><span class="o">=</span><span class="s2">&quot;YOUR_PINECONE_ENVIRONMENT&quot;</span><span class="p">)</span>
+
+<span class="n">index_name</span> <span class="o">=</span> <span class="s2">&quot;your-index-name&quot;</span>
+<span class="k">if</span> <span class="n">index_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pinecone</span><span class="o">.</span><span class="n">list_indexes</span><span class="p">():</span>
+    <span class="n">pinecone</span><span class="o">.</span><span class="n">create_index</span><span class="p">(</span><span class="n">index_name</span><span class="p">,</span> <span class="n">dimension</span><span class="o">=</span><span class="mi">768</span><span class="p">)</span>
+
+<span class="n">index</span> <span class="o">=</span> <span class="n">pinecone</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">index_name</span><span class="p">)</span>
+
+<span class="n">vectorstore</span> <span class="o">=</span> <span class="n">Pinecone</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">DashScopeEmbeddings</span><span class="p">(),</span> <span class="n">index_name</span><span class="o">=</span><span class="n">index_name</span><span class="p">)</span>
+</pre></div>
 </div>
-</section>
-<section id="id11">
-<h3>总结<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h3>
-<p>通过遵循这些步骤，您已经成功设置、交互并部署了使用AgentScope框架和AgentScope Runtime的ReAct智能体。此配置允许智能体在沙箱环境中安全地使用浏览器工具，确保安全有效的网页交互。根据需要调整系统提示词、工具或模型，以自定义智能体的行为来适应特定任务或应用程序。</p>
 </section>
 </section>
 </section>
@@ -717,23 +737,23 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="protocol.html">
+          <a class="next-page" href="tracing.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title"><span class="section-number">6. </span>Agent API 协议规范</div>
+                <div class="title"><span class="section-number">9. </span>执行轨迹追踪</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="training_sandbox.html">
+          <a class="prev-page" href="environment_manager.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">训练用沙箱</div>
+                <div class="title">环境管理器（Environment Manager）</div>
                 
               </div>
             </a>
@@ -781,24 +801,15 @@
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">5. 部署配备工具沙箱的ReAct智能体</a><ul>
-<li><a class="reference internal" href="#id1">前置要求</a><ul>
-<li><a class="reference internal" href="#id2">🔧 安装要求</a></li>
-<li><a class="reference internal" href="#sandbox-setup">🐳 Sandbox Setup</a></li>
-<li><a class="reference internal" href="#api">🔑 API密钥配置</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#id3">分步实现</a><ul>
-<li><a class="reference internal" href="#id4">步骤1：导入依赖项</a></li>
-<li><a class="reference internal" href="#id5">步骤2：配置浏览器工具</a></li>
-<li><a class="reference internal" href="#id6">步骤3：定义系统提示词</a></li>
-<li><a class="reference internal" href="#step-4">Step 4: 初始化智能体和模型</a></li>
-<li><a class="reference internal" href="#step-5">Step 5: 创建运行器</a></li>
-<li><a class="reference internal" href="#id7">步骤6：定义本地交互函数</a></li>
-<li><a class="reference internal" href="#id8">步骤7：运行交互</a></li>
-<li><a class="reference internal" href="#id9">步骤8：本地部署智能体</a></li>
-<li><a class="reference internal" href="#id10">步骤9：运行部署</a></li>
-<li><a class="reference internal" href="#id11">总结</a></li>
+<li><a class="reference internal" href="#">8. RAG</a><ul>
+<li><a class="reference internal" href="#id1">概述</a><ul>
+<li><a class="reference internal" href="#id2">前提条件</a></li>
+<li><a class="reference internal" href="#id3">文档准备</a></li>
+<li><a class="reference internal" href="#id4">构建向量存储索引</a></li>
+<li><a class="reference internal" href="#rag-service">构建rag_service</a></li>
+<li><a class="reference internal" href="#id5">构建rag代理</a></li>
+<li><a class="reference internal" href="#llamaindex">如何使用LlamaIndex</a></li>
+<li><a class="reference internal" href="#id6">如何使用其他数据库</a></li>
 </ul>
 </li>
 </ul>

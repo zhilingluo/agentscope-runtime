@@ -327,9 +327,10 @@
 <li class="toctree-l2"><a class="reference internal" href="environment_manager.html">Environment Manager</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tracing.html">8. Tracing Method Introduction</a></li>
-<li class="toctree-l1"><a class="reference internal" href="demohouse.html">9. Demo House</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="contribute.html">10. How to Contribute</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of 10. How to Contribute</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1"><a class="reference internal" href="rag.html">8. RAG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">9. Tracing Method Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demohouse.html">10. Demo House</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="contribute.html">11. How to Contribute</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of 11. How to Contribute</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="README.html">Contribute to Cookbook</a></li>
 </ul>
 </li>
@@ -366,9 +367,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../zh/environment_manager.html">环境管理器（Environment Manager）</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../zh/tracing.html">8. 执行轨迹追踪</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../zh/demohouse.html">9. Demo 展示厅</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../zh/contribute.html">10. 如何贡献</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of 10. 如何贡献</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l1"><a class="reference internal" href="../zh/rag.html">8. RAG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../zh/tracing.html">9. 执行轨迹追踪</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../zh/demohouse.html">10. Demo 展示厅</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../zh/contribute.html">11. 如何贡献</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of 11. 如何贡献</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../zh/README.html">参与贡献Cookbook</a></li>
 </ul>
 </li>
@@ -480,177 +482,7 @@ It can be initialized by:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">vectorstore</span></code> the vectorstore to be indexed. Specifically, it can be a <code class="docutils literal notranslate"><span class="pre">VectorStore</span></code> instance of LangChain.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">embedding</span></code> the embedding model to be used for indexing.</p></li>
 </ul>
-<p>Here is a simple example to read the doc from a website and use it to retrieve relevant information. You need install <code class="docutils literal notranslate"><span class="pre">agentscope-runtime[langchain_rag]</span></code></p>
-<ol class="arabic simple">
-<li><p>Load documents from by website reader and split them into chucks.</p></li>
-</ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">bs4</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_community.document_loaders</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebBaseLoader</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_text_splitters</span><span class="w"> </span><span class="kn">import</span> <span class="n">RecursiveCharacterTextSplitter</span>
-
-<span class="n">loader</span> <span class="o">=</span> <span class="n">WebBaseLoader</span><span class="p">(</span>
-    <span class="n">web_paths</span><span class="o">=</span><span class="p">(</span>
-        <span class="s2">&quot;https://lilianweng.github.io/posts/2023-06-23-agent/&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;https://lilianweng.github.io/posts/2023-03-15-prompt&quot;</span>
-        <span class="s2">&quot;-engineering/&quot;</span><span class="p">,</span>
-    <span class="p">),</span>
-    <span class="n">bs_kwargs</span><span class="o">=</span><span class="p">{</span>
-        <span class="s2">&quot;parse_only&quot;</span><span class="p">:</span> <span class="n">bs4</span><span class="o">.</span><span class="n">SoupStrainer</span><span class="p">(</span>
-            <span class="n">class_</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;post-content&quot;</span><span class="p">,</span> <span class="s2">&quot;post-title&quot;</span><span class="p">,</span> <span class="s2">&quot;post-header&quot;</span><span class="p">),</span>
-        <span class="p">),</span>
-    <span class="p">},</span>
-<span class="p">)</span>
-<span class="n">documents</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
-<span class="n">text_splitter</span> <span class="o">=</span> <span class="n">RecursiveCharacterTextSplitter</span><span class="p">(</span>
-    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
-    <span class="n">chunk_overlap</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">docs</span> <span class="o">=</span> <span class="n">text_splitter</span><span class="o">.</span><span class="n">split_documents</span><span class="p">(</span><span class="n">documents</span><span class="p">)</span>
-</pre></div>
-</div>
-<ol class="arabic simple" start="2">
-<li><p>Initialize the rag_service by indexing the documents and store it in Milvus. In this example, we use a local file <code class="docutils literal notranslate"><span class="pre">milvus_demo.db</span></code>. We use DashscopeEmbeddings as the embedding model which requires the dashscope key in the envronment.</p></li>
-</ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">langchain_milvus</span><span class="w"> </span><span class="kn">import</span> <span class="n">Milvus</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_community.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeEmbeddings</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.services.rag_service</span><span class="w"> </span><span class="kn">import</span> <span class="n">LangChainRAGService</span>
-
-<span class="c1"># langchain+Milvus</span>
-<span class="n">rag_service</span> <span class="o">=</span> <span class="n">LangChainRAGService</span><span class="p">(</span>
-    <span class="n">vectorstore</span><span class="o">=</span><span class="n">Milvus</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span>
-        <span class="n">documents</span><span class="o">=</span><span class="n">docs</span><span class="p">,</span>
-        <span class="n">embedding</span><span class="o">=</span><span class="n">DashScopeEmbeddings</span><span class="p">(),</span>
-        <span class="n">connection_args</span><span class="o">=</span><span class="p">{</span>
-            <span class="s2">&quot;uri&quot;</span><span class="p">:</span> <span class="s2">&quot;milvus_demo.db&quot;</span><span class="p">,</span>
-        <span class="p">},</span>
-    <span class="p">),</span>
-    <span class="n">embedding</span><span class="o">=</span><span class="n">DashScopeEmbeddings</span><span class="p">(),</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-<ol class="arabic simple" start="3">
-<li><p>Use the rag_service directly. It can be used to retrieve relevant information from the knowledge base. The results are returned as a list of documents.</p></li>
-</ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ret_docs</span> <span class="o">=</span> <span class="k">await</span> <span class="n">rag_service</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span>
-    <span class="s2">&quot;What is self-reflection of an AI Agent?&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-<ol class="arabic simple" start="4">
-<li><p>The rag_service can be integrated in the agent runtime through the context manager.</p></li>
-</ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">Runner</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.agents.llm_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMAgent</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.llms</span><span class="w"> </span><span class="kn">import</span> <span class="n">QwenLLM</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.schemas.agent_schemas</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">MessageType</span><span class="p">,</span>
-    <span class="n">AgentRequest</span><span class="p">,</span>
-    <span class="n">RunStatus</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.services.context_manager</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">create_context_manager</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">USER_ID</span> <span class="o">=</span> <span class="s2">&quot;user1&quot;</span>
-<span class="n">SESSION_ID</span> <span class="o">=</span> <span class="s2">&quot;session1&quot;</span>
-<span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;What is self-reflection of an AI Agent?&quot;</span>
-
-<span class="n">llm_agent</span> <span class="o">=</span> <span class="n">LLMAgent</span><span class="p">(</span>
-    <span class="n">model</span><span class="o">=</span><span class="n">QwenLLM</span><span class="p">(),</span>
-    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;llm_agent&quot;</span><span class="p">,</span>
-    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A simple LLM agent&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="k">async</span> <span class="k">with</span> <span class="n">create_context_manager</span><span class="p">(</span>
-    <span class="n">rag_service</span><span class="o">=</span><span class="n">rag_service</span><span class="p">,</span>
-<span class="p">)</span> <span class="k">as</span> <span class="n">context_manager</span><span class="p">:</span>
-    <span class="n">runner</span> <span class="o">=</span> <span class="n">Runner</span><span class="p">(</span>
-        <span class="n">agent</span><span class="o">=</span><span class="n">llm_agent</span><span class="p">,</span>
-        <span class="n">context_manager</span><span class="o">=</span><span class="n">context_manager</span><span class="p">,</span>
-        <span class="n">environment_manager</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="n">all_result</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-    <span class="n">request</span> <span class="o">=</span> <span class="n">AgentRequest</span><span class="p">(</span>
-        <span class="nb">input</span><span class="o">=</span><span class="p">[</span>
-            <span class="p">{</span>
-                <span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="p">{</span>
-                        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span>
-                    <span class="p">},</span>
-                <span class="p">],</span>
-            <span class="p">},</span>
-        <span class="p">],</span>
-        <span class="n">session_id</span><span class="o">=</span><span class="n">SESSION_ID</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="k">async</span> <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">runner</span><span class="o">.</span><span class="n">stream_query</span><span class="p">(</span>
-        <span class="n">user_id</span><span class="o">=</span><span class="n">USER_ID</span><span class="p">,</span>
-        <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="n">message</span><span class="o">.</span><span class="n">object</span> <span class="o">==</span> <span class="s2">&quot;message&quot;</span>
-            <span class="ow">and</span> <span class="n">MessageType</span><span class="o">.</span><span class="n">MESSAGE</span> <span class="o">==</span> <span class="n">message</span><span class="o">.</span><span class="n">type</span>
-            <span class="ow">and</span> <span class="n">RunStatus</span><span class="o">.</span><span class="n">Completed</span> <span class="o">==</span> <span class="n">message</span><span class="o">.</span><span class="n">status</span>
-        <span class="p">):</span>
-            <span class="n">all_result</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">all_result</span><span class="p">)</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">LlamaIndexRAGService</span></code> is another concrete implementation of <code class="docutils literal notranslate"><span class="pre">RAGService</span></code> that uses LlamaIndex to retrieve relevant information. To use it, you need install <code class="docutils literal notranslate"><span class="pre">agentscope-runtime[llamaindex_rag]</span></code>. Here is a full example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.core.schema</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.readers.web</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleWebPageReader</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.core.node_parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">SentenceSplitter</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_community.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">DashScopeEmbeddings</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">VectorStoreIndex</span><span class="p">,</span> <span class="n">StorageContext</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.vector_stores.milvus</span><span class="w"> </span><span class="kn">import</span> <span class="n">MilvusVectorStore</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">llama_index.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">Settings</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">agentscope_runtime.engine.services.rag_service</span><span class="w"> </span><span class="kn">import</span>   <span class="n">LlamaIndexRAGService</span>
-
-<span class="c1"># llamaindex+Milvus</span>
-
-<span class="c1"># Load documents from web pages</span>
-<span class="n">loader</span> <span class="o">=</span> <span class="n">SimpleWebPageReader</span><span class="p">()</span>
-<span class="n">documents</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_data</span><span class="p">(</span>
-    <span class="n">urls</span><span class="o">=</span><span class="p">[</span>
-        <span class="s2">&quot;https://lilianweng.github.io/posts/2023-06-23-agent/&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;https://lilianweng.github.io/posts/2023-03-15-prompt-&quot;</span>
-        <span class="s2">&quot;engineering/&quot;</span><span class="p">,</span>
-    <span class="p">],</span>
-<span class="p">)</span>
-
-<span class="c1"># Split documents into nodes</span>
-<span class="n">splitter</span> <span class="o">=</span> <span class="n">SentenceSplitter</span><span class="p">(</span><span class="n">chunk_size</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">chunk_overlap</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
-<span class="n">nodes</span> <span class="o">=</span> <span class="n">splitter</span><span class="o">.</span><span class="n">get_nodes_from_documents</span><span class="p">(</span><span class="n">documents</span><span class="p">)</span>
-
-<span class="c1"># Convert nodes to documents</span>
-<span class="n">docs</span> <span class="o">=</span> <span class="p">[</span><span class="n">Document</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">node</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]</span>
-
-
-<span class="n">Settings</span><span class="o">.</span><span class="n">embed_model</span> <span class="o">=</span> <span class="n">DashScopeEmbeddings</span><span class="p">()</span>
-<span class="n">vector_store</span> <span class="o">=</span> <span class="n">MilvusVectorStore</span><span class="p">(</span>
-    <span class="n">uri</span><span class="o">=</span><span class="s2">&quot;milvus_llamaindex_demo.db&quot;</span><span class="p">,</span>
-    <span class="n">dim</span><span class="o">=</span><span class="mi">1536</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">storage_context</span> <span class="o">=</span> <span class="n">StorageContext</span><span class="o">.</span><span class="n">from_defaults</span><span class="p">(</span><span class="n">vector_store</span><span class="o">=</span><span class="n">vector_store</span><span class="p">)</span>
-<span class="n">index</span> <span class="o">=</span> <span class="n">VectorStoreIndex</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span>
-    <span class="n">documents</span><span class="o">=</span><span class="n">docs</span><span class="p">,</span>
-    <span class="n">storage_context</span><span class="o">=</span><span class="n">storage_context</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">rag_service</span> <span class="o">=</span> <span class="n">LlamaIndexRAGService</span><span class="p">(</span>
-    <span class="n">vectorstore</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-    <span class="n">embedding</span><span class="o">=</span><span class="n">DashScopeEmbeddings</span><span class="p">(),</span>
-<span class="p">)</span>
-
-<span class="n">ret_docs</span> <span class="o">=</span> <span class="k">await</span> <span class="n">rag_service</span><span class="o">.</span><span class="n">retrieve</span><span class="p">(</span>
-    <span class="s2">&quot;What is self-reflection of an AI Agent?&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-
-</pre></div>
-</div>
+<p>Read more about RAGService <span class="xref std std-ref">here</span></p>
 </section>
 </section>
 <section id="life-cycle-of-a-context-manager">
@@ -1278,7 +1110,7 @@ Other complicated search algorithms could be used to replace the simple method b
             Made with 
             <a href="https://github.com/pradyunsg/furo">Furo</a>
             <div class="last-updated">
-              Last updated on 2025-09-03</div>
+              Last updated on 2025-09-04</div>
           </div>
           <div class="right-details">
             <div class="icons">
