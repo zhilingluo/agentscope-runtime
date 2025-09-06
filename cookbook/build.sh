@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Multiple versions to build
+VERSIONS=("preview" "v0.1.0" "v0.1.1" "v0.1.2")
+OUTPUT_DIR="_build"
+
 # ANSI color codes for better display
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -65,6 +69,39 @@ echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━�
 echo -e "${CYAN}                           JUPYTER BOOK BUILDER${NC}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
+# Check for uncommitted changes
+print_step "Checking for uncommitted changes"
+if ! git diff-index --quiet HEAD -- || ! git diff --staged --quiet; then
+  print_error "Uncommitted changes detected!"
+  echo -e "${CYAN}─────────────────────────────────────────────────────────────────────────────────${NC}"
+  print_warning "This script needs to switch between git branches to build multiple versions."
+  print_warning "Please commit or stash your changes before running this script."
+  echo
+  print_info "You can use one of the following commands:"
+  echo -e "  ${GREEN}git add . && git commit -m \"your commit message\"${NC}  # To commit changes"
+  echo -e "  ${GREEN}git stash${NC}                                          # To temporarily save changes"
+  echo -e "${CYAN}─────────────────────────────────────────────────────────────────────────────────${NC}"
+
+  # Show uncommitted files
+  echo
+  print_info "Uncommitted files:"
+  git status --porcelain | while IFS= read -r line; do
+    status="${line:0:2}"
+    file="${line:3}"
+    case "$status" in
+      "??") echo -e "  ${RED}[untracked]${NC} $file" ;;
+      " M"|"M ") echo -e "  ${YELLOW}[modified]${NC}  $file" ;;
+      "A ") echo -e "  ${GREEN}[added]${NC}     $file" ;;
+      " D"|"D ") echo -e "  ${RED}[deleted]${NC}   $file" ;;
+      *) echo -e "  ${BLUE}[$status]${NC}      $file" ;;
+    esac
+  done
+  echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  exit 1
+else
+  print_success "Working directory is clean"
+fi
+
 # Check if we're in a Jupyter Book directory
 if [ ! -f "_config.yml" ] && [ ! -f "_toc.yml" ]; then
   print_warning "This doesn't appear to be a Jupyter Book directory"
@@ -80,21 +117,57 @@ else
   exit 1
 fi
 
+INITIAL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+print_step "Current branch: $INITIAL_BRANCH"
+
 # Build the Jupyter Book
-print_step "Building the Jupyter Book"
-echo -e "${YELLOW}Building...${NC}"
-if jupyter-book build .; then
-  print_success "Jupyter Book built successfully"
+for version in "${VERSIONS[@]}"; do
+    print_step "Building version: $version"
+
+    if [ "$version" != "preview" ]; then
+        if git checkout "$version"; then
+            print_success "Switched to $version"
+        else
+            print_error "Failed to checkout $version"
+            git checkout "$INITIAL_BRANCH" 2>/dev/null
+            exit 1
+        fi
+    fi
+
+    if jupyter-book build . --path-output $OUTPUT_DIR/$version; then
+      print_success "Jupyter Book built successfully"
+      if [ "$version" != "preview" ]; then
+          print_step "Moving $version HTML to preview directory"
+
+          if mv $OUTPUT_DIR/$version/_build/html $OUTPUT_DIR/preview/_build/html/$version; then
+                print_success "Successfully moved $version to preview dir"
+          else
+              print_error "Failed to move $version to preview"
+              git checkout "$INITIAL_BRANCH" 2>/dev/null
+              exit 1
+          fi
+      fi
+    else
+      print_error "Failed to build Jupyter Book"
+      git checkout "$INITIAL_BRANCH" 2>/dev/null
+      exit 1
+    fi
+done
+
+# Switch back to initial branch
+print_step "Switching back to initial branch: $INITIAL_BRANCH"
+if git checkout "$INITIAL_BRANCH"; then
+    print_success "Successfully switched back to $INITIAL_BRANCH"
 else
-  print_error "Failed to build Jupyter Book"
-  exit 1
+    print_error "Failed to switch back to $INITIAL_BRANCH"
+    exit 1
 fi
 
 # Check if preview is requested
 if [ "$PREVIEW" = true ]; then
   print_step "Starting preview server"
-  # Check if _build/html directory exists
-  if [ ! -d "_build/html" ]; then
+  # Check if $OUTPUT_DIR/preview/_build/html directory exists
+  if [ ! -d "$OUTPUT_DIR/preview/_build/html" ]; then
     print_error "Build directory not found. Please ensure the build completed successfully."
     exit 1
   fi
@@ -116,16 +189,16 @@ if [ "$PREVIEW" = true ]; then
   print_info "Open your browser and visit: ${GREEN}http://localhost:$PORT${NC}"
   print_info "Press ${RED}Ctrl+C${NC} to stop the server"
   echo -e "${CYAN}─────────────────────────────────────────────────────────────────────────────────${NC}\n"
-  # Start a simple HTTP server in the _build/html directory
-  python -m http.server --directory _build/html $PORT
+  # Start a simple HTTP server in the $OUTPUT_DIR/preview/_build/html directory
+  python -m http.server --directory $OUTPUT_DIR/preview/_build/html $PORT
 else
   print_step "Build Summary"
   print_success "Build completed successfully!"
   print_info "To build and preview the book, run: ${GREEN}$0 -p${NC}"
-  print_info "Build output available in: ${BLUE}_build/html/${NC}"
+  print_info "Build output available in: ${BLUE}$OUTPUT_DIR/preview/_build/html/${NC}"
   # Show file size if possible
   if command -v du >/dev/null 2>&1; then
-    BUILD_SIZE=$(du -sh _build/html 2>/dev/null | cut -f1)
+    BUILD_SIZE=$(du -sh $OUTPUT_DIR/preview/_build/html 2>/dev/null | cut -f1)
     [ -n "$BUILD_SIZE" ] && print_info "Total build size: $BUILD_SIZE"
   fi
   echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
