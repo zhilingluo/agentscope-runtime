@@ -22,13 +22,13 @@ You can learn
 2. How to use Llamaindex as an alternative to LangChain.
 3. How to use FAISS/Chroma/Pinecone/Weaviate as an alternative to Milvus.
 
-Agentscope-runtime contains a lightweight service, called RAGService, which
+Agentscope-runtime contains a lightweight service, called `RAGService`, which
 1. provides the retrieval capability;
 2. integrated by context manager.
 
 It does not contain
 1. the ability to process the doc;
-2. the ability to index the doc.
+2. the ability to index the doc;
 3. the store of the knowledge base.
 
 We suggest to use the popular framework (e.g. Langchain) and database (e.g. FAISS) to complete the task.
@@ -49,7 +49,7 @@ There are some prerequisites:
 The key should be set in the environment variable `DASHSCOPE_API_KEY`.
 2. Install the dependencies: `pip install agentscope-runtime[langchain_rag]`. If use llamaindex, you need install `agentscope-runtime[llamaindex_rag]`.
 
-### Document preparation
+### Document Preparation
 The documents can be loaded from a variety of sources, including websites, PDFs, and other formats.
 Check the API of Langchain to learn how to load documents from various sources.
 Here, we load documents from a website.
@@ -83,13 +83,13 @@ Then we split documents into chunks. The chunk size is 2000 and the chunk overla
 The `RecursiveCharacterTextSplitter`, from Langchain, is a text splitter that splits text into chunks of a given size.
 The split documents are stored in the `docs` variable.
 
-### Building a vectorstore index
+### Building a Vectorstore Index
 The documents need to be indexed and stored in a vectorstore.
-In Langchain, it supports many vectorstores, including Milvus, Chroma, and Pinecone.
+In Langchain, it supports many vector stores, including Milvus, Chroma, and Pinecone.
 We use Milvus as the vectorstore in this example.
 The embedding model is used to embed the documents and store them in the vectorstore.
 Langchain also supports many embedding models, including OpenAI, HuggingFace, and DashScope.
-We use DashScopeEmbeddings as the embedding model.
+We use `DashScopeEmbeddings` as the embedding model.
 
 ```python
 from langchain_milvus import Milvus
@@ -107,7 +107,7 @@ The connection args is the path to the Milvus database.
 For more details, please refer to the [Milvus documentation](https://milvus.io/docs/).
 Here we use a local database file (`milvus_demo.db`).
 
-### Building a rag_service
+### Building a Rag Service
 
 The `RAGService` is a basic class to provide retrieval augmented generation (RAG) capabilities.
 When asked by an end-user, the agent may need to retrieve relevant information from the knowledge base.
@@ -141,9 +141,9 @@ ret_docs = await rag_service.retrieve(
 ```
 
 
-### Building a rag agent
+### Building a Rag Agent
 
-In Agentscope-runtime, rag_service is integrated in the context_manager.
+In Agentscope-runtime, rag_service is integrated in the `context_manager`.
 It composes all data from memory, session and rag into context.
 
 
@@ -206,9 +206,9 @@ async with create_context_manager(
             all_result = message.content[0].text
     print(all_result)
 ```
-In this code we introduce a simple agent and build a runner with the help of context_manager.
+In this code we introduce a simple agent and build a runner with the help of `context_manager`.
 
-### How to use LlamaIndex.
+### How To Use LlamaIndex.
 LlamaIndex is a powerful toolkit for building large language model applications. It provides a variety of tools for building and querying indexes, including vector stores, text splitters, and query engines.
 In Agentscope-runtime, we provide a `LlamaIndexRAGService` to integrate LlamaIndex into Agentscope-runtime. To use it, you need install `agentscope-runtime[llamaindex_rag]`. Here is a full example:
 ```python
@@ -263,7 +263,7 @@ ret_docs = await rag_service.retrieve(
 
 ```
 
-### how to use other database.
+### How To Use Other Database.
 Several vector databases are supported in Agentscope-runtime.
 1. FAISS.
 ```python

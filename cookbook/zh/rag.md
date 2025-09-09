@@ -22,7 +22,7 @@ kernelspec:
 2. 如何使用Llamaindex作为LangChain的替代方案。
 3. 如何使用FAISS/Chroma/Pinecone/Weaviate作为Milvus的替代方案。
 
-Agentscope-runtime包含一个轻量级的服务，称为RAGService，它
+Agentscope-runtime包含一个轻量级的服务，称为`RAGService`，它
 1. 提供检索功能；
 2. 通过上下文管理器集成。
 
@@ -37,15 +37,15 @@ Agentscope-runtime包含一个轻量级的服务，称为RAGService，它
 - 前提条件：所需的所有要求；
 - 文档准备；
 - 构建向量存储索引；
-- 构建rag_service；
-- 构建rag代理。
+- 构建RAGService；
+- 构建RAG代理。
 - 如何使用LlamaIndex。
 - 如何使用其他数据库。
 
 ### 前提条件
 有一些前提条件：
 1. DashScope的密钥：用于访问Qwen模型和嵌入模型的DashScope API。该密钥应设置在环境变量`DASHSCOPE_API_KEY`中。
-2. 安装依赖项：`pip install agentscope-runtime[langchain_rag]`。如果使用llamaindex，则需要安装`agentscope-runtime[llamaindex_rag]`。
+2. 安装依赖项：`pip install agentscope-runtime[langchain_rag]`。如果使用Llamaindex，则需要安装`agentscope-runtime[llamaindex_rag]`。
 
 ### 文档准备
 文档可以从多种来源加载，包括网站、PDF和其他格式。请参阅Langchain的API以了解如何从各种来源加载文档。这里，我们从网站加载文档。
@@ -77,7 +77,7 @@ docs = text_splitter.split_documents(documents)
 在这段代码中，我们使用支持bs4解析网站的`WebBaseLoader`收集网站内容。然后我们将文档分割成块，块大小为2000，重叠为200。`RecursiveCharacterTextSplitter`是Langchain中的文本分割器，可以将文本分割成指定大小的块。分割后的文档存储在`docs`变量中。
 
 ### 构建向量存储索引
-文档需要被索引并存储在向量存储中。在Langchain中，它支持许多向量存储，包括Milvus、Chroma和Pinecone。在这个例子中，我们使用Milvus作为向量存储。嵌入模型用于嵌入文档并将它们存储在向量存储中。Langchain还支持许多嵌入模型，包括OpenAI、HuggingFace和DashScope。我们使用DashScopeEmbeddings作为嵌入模型。
+文档需要被索引并存储在向量存储中。在Langchain中，它支持许多向量存储，包括Milvus、Chroma和Pinecone。在这个例子中，我们使用Milvus作为向量存储。嵌入模型用于嵌入文档并将它们存储在向量存储中。Langchain还支持许多嵌入模型，包括OpenAI、HuggingFace和DashScope。我们使用`DashScopeEmbeddings`作为嵌入模型。
 
 ```python
 from langchain_milvus import Milvus
@@ -92,7 +92,7 @@ vectorstore=Milvus.from_documents(
 ```
 在这段代码中，我们通过其`from_documents`初始化了一个Milvus向量存储。连接参数是Milvus数据库的路径。更多详细信息，请参阅[Milvus文档](https://milvus.io/docs/)。这里我们使用一个本地数据库文件（`milvus_demo.db`）。
 
-### 构建rag_service
+### 构建RAGService
 
 `RAGService`是一个提供检索增强生成（RAG）能力的基本类。当终端用户询问时，代理可能需要从知识库中检索相关信息。知识库可以是数据库或文档集合。`RAGService`包含以下方法：
 - `retrieve`：从知识库中检索相关信息。
@@ -112,16 +112,16 @@ rag_service = LangChainRAGService(
     embedding=DashScopeEmbeddings()
 )
 ```
-在这段代码中，我们通过其`vectorstore`和`embedding`初始化了一个`LangChainRAGService`。我们可以直接使用rag_service。它可以用来从知识库中检索相关信息。结果以文档列表的形式返回。
+在这段代码中，我们通过其`vectorstore`和`embedding`初始化了一个`LangChainRAGService`。我们可以直接使用`rag_service`。它可以用来从知识库中检索相关信息。结果以文档列表的形式返回。
 ```python
 ret_docs = await rag_service.retrieve(
     "What is self-reflection of an AI Agent?",
 )
 ```
 
-### 构建rag代理
+### 构建RAG代理
 
-在Agentscope-runtime中，rag_service集成在上下文管理器中。它组合了来自内存、会话和rag的所有数据到上下文中。
+在Agentscope-runtime中，`rag_service`集成在`context_manager`中。它组合了来自内存、会话和rag的所有数据到上下文中。
 
 ```python
 from agentscope_runtime.engine import Runner
@@ -182,7 +182,7 @@ async with create_context_manager(
             all_result = message.content[0].text
     print(all_result)
 ```
-在这段代码中，我们引入了一个简单的代理，并借助上下文管理器构建了一个运行器。
+在这段代码中，我们引入了一个简单的代理，并借助`context_manager`构建了一个运行器。
 
 ### 如何使用LlamaIndex
 LlamaIndex是一个强大的工具包，用于构建大型语言模型应用程序。它提供了多种工具来构建和查询索引，包括向量存储、文本分割器和查询引擎。在Agentscope-runtime中，我们提供了一个`LlamaIndexRAGService`来将LlamaIndex集成到Agentscope-runtime中。要使用它，你需要安装`agentscope-runtime[llamaindex_rag]`。这是一个完整的示例：

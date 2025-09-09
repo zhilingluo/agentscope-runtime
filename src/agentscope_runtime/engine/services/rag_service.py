@@ -26,6 +26,18 @@ class RAGService(ServiceWithLifecycleManager):
         return ""
 
     async def retrieve(self, query: str, k: int = 1) -> list[str]:
+        """
+        Retrieves similar documents based on the given query.
+
+        Args:
+            query (str): The query string to search for similar documents.
+            k (int, optional): The number of similar documents to retrieve.
+            Defaults to 1.
+
+        Returns:
+            list[str]: A list of document contents that are similar to
+            the query.
+        """
         raise NotImplementedError
 
     async def start(self) -> None:
@@ -76,6 +88,21 @@ class LangChainRAGService(RAGService):
             self.vectorstore = vectorstore
 
     async def retrieve(self, query: str, k: int = 1) -> list[str]:
+        """
+        Retrieves similar documents based on the given query using LangChain.
+
+        Args:
+            query (str): The query string to search for similar documents.
+            k (int, optional): The number of similar documents to retrieve.
+            Defaults to 1.
+
+        Returns:
+            list[str]: A list of document contents that are similar to the
+            query.
+
+        Raises:
+            ValueError: If the vector store is not initialized.
+        """
         if self.vectorstore is None:
             raise ValueError(
                 "Vector store not initialized. Call build_index first.",
@@ -137,6 +164,21 @@ class LlamaIndexRAGService(RAGService):
             self.index = vectorstore
 
     async def retrieve(self, query: str, k: int = 1) -> list[str]:
+        """
+        Retrieves similar documents based on the given query using LlamaIndex.
+
+        Args:
+            query (str): The query string to search for similar documents.
+            k (int, optional): The number of similar documents to retrieve.
+            Defaults to 1.
+
+        Returns:
+            list[str]: A list of document contents that are similar to the
+            query.
+
+        Raises:
+            ValueError: If the index is not initialized.
+        """
         if self.index is None:
             raise ValueError(
                 "Index not initialized.",
