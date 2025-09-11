@@ -133,7 +133,8 @@ class AgentscopeBrowseruseAgent:
 
         if len(sandboxes) > 0:
             sandbox = sandboxes[0]
-            ws = sandbox.browser_ws
+            js = sandbox.get_info()
+            ws = js["front_browser_ws"]
             self.ws = ws
         else:
             self.ws = ""

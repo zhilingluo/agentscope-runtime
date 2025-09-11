@@ -83,7 +83,7 @@ graph LR;
 
 Node and Python environments are required.
 
-1. Install [Node.js](https://nodejs.org/en/) (version >= 22)
+1. Install [Node.js](https://nodejs.org/en/)
 2. Install [Python](https://www.python.org/) (version >= 3.11)
 3. Apply a DashScope API key to the `backend/.env` file.
 
