@@ -22,6 +22,14 @@ jobs:
     - name: Install AgentScope Runtime
       run: |
         pip install -q -e ".[dev]"
+    - name: Install frontend dependencies
+      run: |
+        cd demohouse/browser_use/frontend
+        npm ci
+    - name: Install frontend dependencies
+      run: |
+        cd demohouse/chatbot/frontend
+        npm ci
     - name: Install pre-commit hooks
       run: |
         pre-commit install
