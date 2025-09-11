@@ -25,11 +25,13 @@ jobs:
     - name: Install frontend dependencies
       run: |
         cd demohouse/browser_use/frontend
-        npm ci
+        npm install
+        cd ../../../
     - name: Install frontend dependencies
       run: |
         cd demohouse/chatbot/frontend
-        npm ci
+        npm install
+        cd ../../../
     - name: Install pre-commit hooks
       run: |
         pre-commit install
