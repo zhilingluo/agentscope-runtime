@@ -99,7 +99,9 @@ npm install
 #### Run the Front-end Service
 
 ```bash
-npm run start
+npm run build
+npm install -g serve
+serve -s build
 ```
 
 This will open your browser and display the demo page. Alternatively, you can also open it in your browser at http://localhost:3000:
