@@ -28,6 +28,12 @@
 
 ---
 
+## 🆕 NEWS
+
+* **[2025-10]**  **GUI Sandbox** is added with support for virtual desktop environments, mouse, keyboard, and screen operations.  Introduced the **`desktop_url`** property for GUI Sandbox, Browser Sandbox, and Filesystem Sandbox — allowing direct access to the virtual desktop via your browser.  Check our [cookbook](https://runtime.agentscope.io/en/sandbox.html#sandbox-usage) for more details.
+
+---
+
 ## ✨ Key Features
 
 - **🏗️ Deployment Infrastructure**: Built-in services for session management, memory, and sandbox environment control
@@ -164,6 +170,7 @@ from agentscope_runtime.sandbox import BaseSandbox
 
 with BaseSandbox() as box:
     # By default, pulls `agentscope/runtime-sandbox-base:latest` from DockerHub
+    print(box.list_tools()) # List all available tools
     print(box.run_ipython_cell(code="print('hi')"))  # Run Python code
     print(box.run_shell_command(command="echo hello"))  # Run shell command
     input("Press Enter to continue...")
@@ -180,6 +187,7 @@ from agentscope_runtime.sandbox import GuiSandbox
 
 with GuiSandbox() as box:
     # By default, pulls `agentscope/runtime-sandbox-gui:latest` from DockerHub
+    print(box.list_tools()) # List all available tools
     print(box.desktop_url)  # Web desktop access URL
     print(box.computer_use(action="get_cursor_position"))  # Get mouse cursor position
     print(box.computer_use(action="get_screenshot"))       # Capture screenshot
@@ -197,6 +205,7 @@ from agentscope_runtime.sandbox import BrowserSandbox
 
 with BrowserSandbox() as box:
     # By default, pulls `agentscope/runtime-sandbox-browser:latest` from DockerHub
+    print(box.list_tools()) # List all available tools
     print(box.desktop_url)  # Web desktop access URL
     box.browser_navigate("https://www.google.com/")  # Open a webpage
     input("Press Enter to continue...")
@@ -213,6 +222,7 @@ from agentscope_runtime.sandbox import FilesystemSandbox
 
 with FilesystemSandbox() as box:
     # By default, pulls `agentscope/runtime-sandbox-filesystem:latest` from DockerHub
+    print(box.list_tools()) # List all available tools
     print(box.desktop_url)  # Web desktop access URL
     box.create_directory("test")  # Create a directory
     input("Press Enter to continue...")
@@ -220,20 +230,41 @@ with FilesystemSandbox() as box:
 
 #### Configuring Sandbox Image Registry, Namespace, and Tag
 
-If pulling the Docker image from DockerHub fails (for example, due to network restrictions), you can change the source registry to the Alibaba Cloud container registry for faster access:
+##### 1. Registry
+
+If pulling images from DockerHub fails (for example, due to network restrictions), you can switch the image source to Alibaba Cloud Container Registry for faster access:
 
 ```bash
 export RUNTIME_SANDBOX_REGISTRY="agentscope-registry.ap-southeast-1.cr.aliyuncs.com"
 ```
 
-You can also customize the **image namespace** and **image tag** via environment variables:
+##### 2. Namespace
+
+A namespace is used to distinguish images of different teams or projects. You can customize the namespace via an environment variable:
 
 ```bash
-export RUNTIME_SANDBOX_IMAGE_NAMESPACE="myteam"
-export RUNTIME_SANDBOX_IMAGE_TAG="20251020"
+export RUNTIME_SANDBOX_IMAGE_NAMESPACE="agentscope"
 ```
 
-This will make the sandbox SDK pull:
+For example, here `agentscope` will be used as part of the image path.
+
+##### 3. Tag
+
+An image tag specifies the version of the image, for example:
+
+```bash
+export RUNTIME_SANDBOX_IMAGE_TAG="preview"
+```
+
+Details:
+
+- Default is `latest`, which means the image version matches the PyPI latest release.
+- `preview` means the latest preview version built in sync with the **GitHub main branch**.
+- You can also use a specified version number such as `20250909`. You can check all available image versions at [DockerHub](https://hub.docker.com/repositories/agentscope).
+
+##### 4. Complete Image Path
+
+The sandbox SDK will build the full image path based on the above environment variables:
 
 ```bash
 <RUNTIME_SANDBOX_REGISTRY>/<RUNTIME_SANDBOX_IMAGE_NAMESPACE>/runtime-sandbox-base:<RUNTIME_SANDBOX_IMAGE_TAG>
@@ -242,7 +273,7 @@ This will make the sandbox SDK pull:
 Example:
 
 ```bash
-agentscope-registry.ap-southeast-1.cr.aliyuncs.com/myteam/runtime-sandbox-base:20251020
+agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:preview
 ```
 
 ---
