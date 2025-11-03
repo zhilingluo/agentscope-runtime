@@ -167,6 +167,10 @@ class AgentScopeContextAdapter:
 
     async def adapt_model(self):
         model = self.attr["model"]
+
+        if hasattr(model, "stream"):
+            model.stream = True
+
         formatter = self.attr["agent_config"].get("formatter")
         if formatter and isinstance(formatter, FormatterBase):
             return model, formatter
