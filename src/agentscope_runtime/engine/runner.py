@@ -24,6 +24,10 @@ from .services.context_manager import ContextManager
 from .services.environment_manager import EnvironmentManager
 from .tracing import TraceType
 from .tracing.wrapper import trace
+from .tracing.message_util import (
+    merge_agent_response,
+    get_agent_response_finish_reason,
+)
 
 
 class Runner:
@@ -128,7 +132,12 @@ class Runner:
         self._deploy_managers[deploy_manager.deploy_id] = deploy_result
         return deploy_result
 
-    @trace(TraceType.AGENT_STEP)
+    @trace(
+        TraceType.AGENT_STEP,
+        trace_name="agent_step",
+        merge_output_func=merge_agent_response,
+        get_finish_reason_func=get_agent_response_finish_reason,
+    )
     async def stream_query(  # pylint:disable=unused-argument
         self,
         request: Union[AgentRequest, dict],
