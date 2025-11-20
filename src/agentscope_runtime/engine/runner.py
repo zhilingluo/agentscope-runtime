@@ -36,6 +36,7 @@ from .tracing.message_util import (
     merge_agent_response,
     get_agent_response_finish_reason,
 )
+from .constant import ALLOWED_FRAMEWORK_TYPES
 
 
 logger = logging.getLogger(__name__)
@@ -46,20 +47,11 @@ class Runner:
         """
         Initializes a runner as core instance.
         """
-        self._framework_type_value = None
+        self.framework_type = None
 
         self._deploy_managers = {}
+        self._health = False
         self._exit_stack = AsyncExitStack()
-
-    @property
-    def framework_type(self):
-        """Get framework_type"""
-        return self._framework_type_value
-
-    @framework_type.setter
-    def framework_type(self, value):
-        """Set framework_type"""
-        self._framework_type_value = value
 
     async def query_handler(self, *args, **kwargs):
         """
@@ -77,10 +69,7 @@ class Runner:
         Shutdown handler.
         """
 
-    async def __aenter__(self) -> "Runner":
-        """
-        Initializes the runner
-        """
+    async def start(self):
         init_fn = getattr(self, "init_handler", None)
         if callable(init_fn):
             if inspect.iscoroutinefunction(init_fn):
@@ -89,9 +78,10 @@ class Runner:
                 init_fn()
         else:
             logger.warning("[Runner] init_handler is not callable")
+        self._health = True
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def stop(self):
         shutdown_fn = getattr(self, "shutdown_handler", None)
         try:
             if callable(shutdown_fn):
@@ -104,6 +94,25 @@ class Runner:
         try:
             await self._exit_stack.aclose()
         except Exception:
+            pass
+
+        self._health = False
+
+    async def __aenter__(self) -> "Runner":
+        """
+        Initializes the runner
+        """
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.stop()
+
+        if hasattr(self, "_deploy_manager") and self._deploy_manager:
+            for deploy_id in self._deploy_manager:
+                await self._deploy_manager[deploy_id].stop()
+        else:
+            # No deploy manager found, nothing to stop
             pass
 
     async def deploy(
@@ -194,8 +203,19 @@ class Runner:
         """
         Streams the agent.
         """
-        if self.framework_type is None:
-            raise RuntimeError("Framework type is not set")
+        if self.framework_type not in ALLOWED_FRAMEWORK_TYPES:
+            raise RuntimeError(
+                f"Framework type '{self.framework_type}' is invalid or not "
+                f"set. Please set `self.framework_type` to one of:"
+                f" {', '.join(ALLOWED_FRAMEWORK_TYPES)}.",
+            )
+
+        if not self._health:
+            raise RuntimeError(
+                "Runner has not been started. "
+                "Please call 'await runner.start()' or use 'async with "
+                "Runner()' before calling 'stream_query'.",
+            )
 
         if isinstance(request, dict):
             request = AgentRequest(**request)
@@ -220,7 +240,11 @@ class Runner:
             "request": request,
         }
 
-        if self.framework_type == "agentscope":
+        if self.framework_type == "text":
+            from ..adapters.text.stream import adapt_text_stream
+
+            stream_adapter = adapt_text_stream
+        elif self.framework_type == "agentscope":
             from ..adapters.agentscope.stream import (
                 adapt_agentscope_message_stream,
             )
@@ -230,7 +254,6 @@ class Runner:
             kwargs.update(
                 {"msgs": message_to_agentscope_msg(request.input)},
             )
-
         # TODO: support other frameworks
         else:
 
@@ -252,7 +275,6 @@ class Runner:
                 event.status == RunStatus.Completed
                 and event.object == "message"
             ):
-                # TODO: use message adapter here according to framework
                 response.add_new_message(event)
             yield seq_gen.yield_with_sequence(event)
 
@@ -270,22 +292,3 @@ class Runner:
     #     Streams the agent.
     #     """
     #     return ...
-
-    async def stop(
-        self,
-        deploy_id: str,
-    ) -> None:
-        """
-        Stops the agent service.
-
-        Args:
-            deploy_id: Optional deploy ID (not used for service shutdown)
-
-        Raises:
-            RuntimeError: If stopping fails
-        """
-        if hasattr(self, "_deploy_manager") and self._deploy_manager:
-            await self._deploy_manager[deploy_id].stop()
-        else:
-            # No deploy manager found, nothing to stop
-            pass
