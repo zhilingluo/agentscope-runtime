@@ -14,7 +14,7 @@ kernelspec:
 
 # 快速开始
 
-本教程演示如何在 **AgentScope Runtime** 框架中构建一个简单的智能体并将其部署为服务。
+本教程演示如何在 **AgentScope Runtime** 框架中构建一个简单的智能体应用并将其部署为服务。
 
 ## 前置条件
 
@@ -43,53 +43,132 @@ export DASHSCOPE_API_KEY="your_api_key_here"
 ```{code-cell}
 import os
 
-from agentscope_runtime.engine import AgentApp
-from agentscope_runtime.engine.agents.agentscope_agent import AgentScopeAgent
-from agentscope_runtime.engine.deployers import LocalDeployManager
-from agentscope.model import OpenAIChatModel
 from agentscope.agent import ReActAgent
+from agentscope.model import DashScopeChatModel
+from agentscope.formatter import DashScopeChatFormatter
+from agentscope.tool import Toolkit, execute_python_code
+from agentscope.pipeline import stream_printing_messages
 
+from agentscope_runtime.engine import AgentApp
+from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
+from agentscope_runtime.adapters.agentscope.memory import (
+    AgentScopeSessionHistoryMemory,
+)
+from agentscope_runtime.engine.services.agent_state import (
+    InMemoryStateService,
+)
+from agentscope_runtime.engine.services.session_history import (
+    InMemorySessionHistoryService,
+)
 
 print("✅ 依赖导入成功")
 ```
 
-### 步骤2：创建智能体
+### 步骤2：创建Agent App
 
-我们这里使用agentscope作为示例：
+`AgentApp` 是整个 Agent 应用的生命周期和请求调用的核心，接下来所有的初始化、查询处理、关闭资源等都基于它来注册。
 
 ```{code-cell}
-from agentscope.agent import ReActAgent
-from agentscope.model import DashScopeChatModel
-from agentscope_runtime.engine.agents.agentscope_agent import AgentScopeAgent
-
-agent = AgentScopeAgent(
-    name="Friday",
-    model=DashScopeChatModel(
-        "qwen-turbo",
-        api_key=os.getenv("DASHSCOPE_API_KEY"),
-    ),
-    agent_config={
-        "sys_prompt": "You're a helpful assistant named Friday.",
-    },
-    agent_builder=ReActAgent,
+agent_app = AgentApp(
+    app_name="Friday",
+    app_description="A helpful assistant",
 )
 
-print("✅ AgentScope agent created successfully")
+print("✅ Agent App创建成功")
 ```
 
-### 步骤3：创建并启动Agent App
+### 步骤3：注册生命周期方法（初始化 & 关闭）
 
-用agent和 `AgentApp` 创建一个 Agent API 服务器：
+这里定义了应用在启动时要做的事情（启动状态管理、会话历史服务），以及关闭时释放这些资源。
 
 ```{code-cell}
-app = AgentApp(agent=agent, endpoint_path="/process")
+@agent_app.init
+async def init_func(self):
+    self.state_service = InMemoryStateService()
+    self.session_service = InMemorySessionHistoryService()
 
+    await self.state_service.start()
+    await self.session_service.start()
+
+@agent_app.shutdown
+async def shutdown_func(self):
+    await self.state_service.stop()
+    await self.session_service.stop()
+```
+
+### 步骤4：定义 AgentScope Agent 的查询逻辑
+
+这一部分定义了Agent API 被调用时的业务逻辑：
+
+- **获取会话信息**：确保不同用户或会话的上下文独立。
+- **构建 Agent**：包括模型、工具（例如执行 Python 代码）、会话记忆模块、格式化器。
+- **支持流式输出**：必须使用 `stream_printing_messages` 返回 `(msg, last)`，为客户端提供边生成边响应的能力。
+- **状态持久化**：将 Agent 的当前状态保存下来。
+
+```{code-cell}
+@agent_app.query(framework="agentscope")
+async def query_func(
+    self,
+    msgs,
+    request: AgentRequest = None,
+    **kwargs,
+):
+    session_id = request.session_id
+    user_id = request.user_id
+
+    state = await self.state_service.export_state(
+        session_id=session_id,
+        user_id=user_id,
+    )
+
+    toolkit = Toolkit()
+    toolkit.register_tool_function(execute_python_code)
+
+    agent = ReActAgent(
+        name="Friday",
+        model=DashScopeChatModel(
+            "qwen-turbo",
+            api_key=os.getenv("DASHSCOPE_API_KEY"),
+            stream=True,
+        ),
+        sys_prompt="You're a helpful assistant named Friday.",
+        toolkit=toolkit,
+        memory=AgentScopeSessionHistoryMemory(
+            service=self.session_service,
+            session_id=session_id,
+            user_id=user_id,
+        ),
+        formatter=DashScopeChatFormatter(),
+    )
+    agent.set_console_output_enabled(enabled=False)
+
+    if state:
+        agent.load_state_dict(state)
+
+    async for msg, last in stream_printing_messages(
+        agents=[agent],
+        coroutine_task=agent(msgs),
+    ):
+        yield msg, last
+
+    state = agent.state_dict()
+
+    await self.state_service.save_state(
+        user_id=user_id,
+        session_id=session_id,
+        state=state,
+    )
+```
+
+### 步骤5：启动Agent App
+
+启动 Agent API 服务器，运行后，服务器会启动并监听：`http://localhost:8090/process`：
+
+```{code-cell}
 app.run(host="0.0.0.0", port=8090)
 ```
 
-运行后，服务器会启动并监听：`http://localhost:8090/process`
-
-### 步骤4：发送一个请求
+### 步骤6：发送一个请求
 
 你可以使用 `curl` 向 API 发送 JSON 输入：
 
@@ -119,7 +198,7 @@ data: {"sequence_number":3,"object":"content","status":"in_progress","text":" ca
 data: {"sequence_number":4,"object":"message","status":"completed","text":"The capital of France is Paris." }
 ```
 
-### 步骤5: 使用 Deployer 部署代理
+### 步骤7: 使用 DeployManager 部署智能体应用
 
 AgentScope Runtime 提供了一个功能强大的部署系统，可以将你的智能体部署到远程或本地容器中。这里我们以 `LocalDeployManager` 为例：
 

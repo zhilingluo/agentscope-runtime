@@ -14,7 +14,7 @@ kernelspec:
 
 # Quick Start
 
-This guide demonstrates how to build a simple agent in the **AgentScope Runtime** framework and deploy it as a service.
+This guide demonstrates how to build a simple agent application in the **AgentScope Runtime** framework and deploy it as a service.
 
 ## Prerequisites
 
@@ -43,52 +43,134 @@ Start by importing all necessary modules:
 ```{code-cell}
 import os
 
-from agentscope_runtime.engine import AgentApp
-from agentscope_runtime.engine.agents.agentscope_agent import AgentScopeAgent
-from agentscope_runtime.engine.deployers import LocalDeployManager
-from agentscope.model import OpenAIChatModel
 from agentscope.agent import ReActAgent
+from agentscope.model import DashScopeChatModel
+from agentscope.formatter import DashScopeChatFormatter
+from agentscope.tool import Toolkit, execute_python_code
+from agentscope.pipeline import stream_printing_messages
 
+from agentscope_runtime.engine import AgentApp
+from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
+from agentscope_runtime.adapters.agentscope.memory import (
+    AgentScopeSessionHistoryMemory,
+)
+from agentscope_runtime.engine.services.agent_state import (
+    InMemoryStateService,
+)
+from agentscope_runtime.engine.services.session_history import (
+    InMemorySessionHistoryService,
+)
 
 print("✅ Dependencies imported successfully")
 ```
 
-### Step 2: Create Agent
+### Step 2: Create an Agent App
 
-We will take Agentscope as example.
+`AgentApp` is the core of an agent application's lifecycle and request handling. All initialization, query processing, and resource cleanup will be registered on it.
 
 ```{code-cell}
-agent = AgentScopeAgent(
-    name="Friday",
-    model=OpenAIChatModel(
-        "gpt-4",
-        api_key=os.getenv("OPENAI_API_KEY"),
-    ),
-    agent_config={
-        "sys_prompt": "You're a helpful assistant named Friday.",
-    },
-    agent_builder=ReActAgent,
+agent_app = AgentApp(
+    app_name="Friday",
+    app_description="A helpful assistant",
 )
 
-print("✅ AgentScope agent created successfully")
+print("✅ Agent App created successfully")
 ```
 
+### Step 3: Register Lifecycle Methods (Initialization & Shutdown)
 
-### Step3: Create and Launch Agent App
-
-Create an agent API server using agent and `AgentApp`:
+Here we define what the app does at startup (initialize state management, session history services) and how it releases resources when shutting down.
 
 ```{code-cell}
-app = AgentApp(agent=agent, endpoint_path="/process")
+@agent_app.init
+async def init_func(self):
+    self.state_service = InMemoryStateService()
+    self.session_service = InMemorySessionHistoryService()
 
+    await self.state_service.start()
+    await self.session_service.start()
+
+@agent_app.shutdown
+async def shutdown_func(self):
+    await self.state_service.stop()
+    await self.session_service.stop()
+```
+
+### Step 4: Define AgentScope Agent Query Logic
+
+- This section defines the business logic when the Agent API is called:
+  - **Get session information**: Ensure context is isolated between different users/sessions.
+  - **Build the agent**: Includes model, tools (e.g. execute Python code), memory, formatter.
+  - **Support streaming output**: Must use `stream_printing_messages` to return `(msg, last)` to support generation while responding to the client.
+  - **Persist state**: Save the agent’s current state.
+
+```{code-cell}
+@agent_app.query(framework="agentscope")
+async def query_func(
+    self,
+    msgs,
+    request: AgentRequest = None,
+    **kwargs,
+):
+    session_id = request.session_id
+    user_id = request.user_id
+
+    state = await self.state_service.export_state(
+        session_id=session_id,
+        user_id=user_id,
+    )
+
+    toolkit = Toolkit()
+    toolkit.register_tool_function(execute_python_code)
+
+    agent = ReActAgent(
+        name="Friday",
+        model=DashScopeChatModel(
+            "qwen-turbo",
+            api_key=os.getenv("DASHSCOPE_API_KEY"),
+            stream=True,
+        ),
+        sys_prompt="You're a helpful assistant named Friday.",
+        toolkit=toolkit,
+        memory=AgentScopeSessionHistoryMemory(
+            service=self.session_service,
+            session_id=session_id,
+            user_id=user_id,
+        ),
+        formatter=DashScopeChatFormatter(),
+    )
+    agent.set_console_output_enabled(enabled=False)
+
+    if state:
+        agent.load_state_dict(state)
+
+    async for msg, last in stream_printing_messages(
+        agents=[agent],
+        coroutine_task=agent(msgs),
+    ):
+        yield msg, last
+
+    state = agent.state_dict()
+
+    await self.state_service.save_state(
+        user_id=user_id,
+        session_id=session_id,
+        state=state,
+    )
+```
+
+### Step 5: Start the Agent App
+
+Start the Agent API server. Once running, the server will be listening at:
+`http://localhost:8090/process`
+
+```{code-cell}
 app.run(host="0.0.0.0", port=8090)
 ```
 
-The server will start and listen on: `http://localhost:8090/process`.
+### Step 6: Send Request to Agent
 
-### Step 4: Send Request to Agent
-
-You can send JSON input to the API using `curl`:
+You can use `curl` to send a JSON payload to the API:
 
 ```bash
 curl -N \
@@ -116,7 +198,7 @@ data: {"sequence_number":3,"object":"content","status":"in_progress","text":" ca
 data: {"sequence_number":4,"object":"message","status":"completed","text":"The capital of France is Paris." }
 ```
 
-### Step 5: Deploy the Agent with Deployer
+### Step 7: Deploy the Agent App Using DeployManager
 
 The AgentScope Runtime provides a powerful deployment system that allows you to deploy your agent to remote or local container. And we use `LocalDeployManager` as example:
 
