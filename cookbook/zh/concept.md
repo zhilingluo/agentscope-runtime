@@ -11,14 +11,12 @@
 
 AgentScope Runtime使用模块化架构，包含几个关键组件：
 
-<img src="/_static/agent_architecture_zh.jpg" alt="Installation Options" style="zoom:25%;" />
+<img src="/_static/agent_architecture_zh.jpg" alt="智能体架构" style="zoom:25%;" />
 
-- **Agent**：处理请求并生成响应的核心AI组件（可以是基于LLM的、基于工作流的或自定义实现，如 Langgraph、Agentscope、Agno）
+- **Agent**：处理请求并生成响应的核心AI组件（可以是基于LLM的、基于工作流的或自定义实现，如 Agentscope）
 - **AgentApp**: 继承于 FastAPI App，作为应用入口，负责对外提供 API 接口、路由注册、配置加载，并将请求交由 Runner 调用执行
-- **Runner**：在运行时编排智能体执行并管理部署
-- **Context**：包含智能体执行所需的所有信息
-- **Context & Env Manager**：提供额外功能服务管理，如会话历史管理、长期记忆管理、沙箱管理
-- **Deployer**：将Runner部署为服务
+- **Runner**：在运行时编排智能体执行并管理部署。它处理智能体生命周期、会话管理、流式响应和服务部署。
+- **Deployer**：将Runner部署为服务，提供健康检查、监控、生命周期管理、使用SSE的实时响应流式传输、错误处理、日志记录和优雅关闭。
 
 ### 关键组件
 
@@ -42,34 +40,20 @@ AgentScope Runtime使用模块化架构，包含几个关键组件：
 
 `Runner` 类提供灵活且可扩展的运行时来编排智能体执行并提供部署功能。它管理：
 
-- 智能体生命周期 +会话管理
+- 通过 `init_handler` 和 `shutdown_handler` 管理智能体生命周期
+- 通过 `query_handler` 处理请求
 - 流式响应
-- 服务部署
+- 通过 `deploy()` 方法进行服务部署
 
-#### 4. Context
+#### 4. Deployer
 
-`Context` 对象包含智能体执行所需的所有信息：
+`Deployer`（实现为 `DeployManager`）提供生产级别的部署功能：
 
-- 智能体实例本身
-- 会话信息
-- 用户请求
-- 服务实例
-
-#### 5. Context & Env Manager
-
-包含`ContextManager`和`EnvironmentManager`:
-
-* `ContextManager`：提供会话历史管理、长期记忆管理
-* `EnvironmentManager`:提供沙箱生命周期的管理
-
-#### 6. Deployer
-
-`Deployer` 系统提供生产级别的部署功能：
-
-- 将`runner`部署为服务
+- 将Runner部署为服务
 - 健康检查、监控和生命周期管理
 - 使用SSE的实时响应流式传输
 - 错误处理、日志记录和优雅关闭
+- 支持多种部署模式（本地、容器化、Kubernetes等）
 
 ## 沙箱模块概念
 

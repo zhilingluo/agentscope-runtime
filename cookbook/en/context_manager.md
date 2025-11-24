@@ -12,134 +12,170 @@ kernelspec:
   name: python3
 ---
 
-# Context Manager
+# Services
 
 ## Overview
-Context Manager provides a convenient way to manage the context lifecycle.
-It consists of:
 
-- a set of context services (session history, memory)
-- a `ContextComposer` to orchestrate history and memory updates
+Services in AgentScope Runtime provide essential functionality for agent execution, including session history management, memory storage, sandbox management, and state management. All services implement the `ServiceWithLifecycleManager` interface, which provides standard lifecycle management methods: `start()`, `stop()`, and `health()`.
 
-## Services
-The `services` in context manager are those that are required for the context.
-For example, if you want to use the context manager to manage the session history, you need to add the `SessionHistoryService` to the services list.
+## Service Interface
 
-We provide some basic built-in services for you to use.
-And you can also create your own services.
+All services must implement the `ServiceWithLifecycleManager` interface:
 
-Here are the built-in services:
+```{code-cell}
+from agentscope_runtime.engine.services.base import ServiceWithLifecycleManager
+
+class MockService(ServiceWithLifecycleManager):
+    def __init__(self, name: str):
+        self.name = name
+        self.started = False
+        self.stopped = False
+
+    async def start(self):
+        self.started = True
+
+    async def stop(self):
+        self.stopped = True
+
+    async def health(self) -> bool:
+        return self.started and not self.stopped
+```
+
+### Service Lifecycle
+
+Services follow a standard lifecycle pattern:
+
+```{code-cell}
+import asyncio
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
+
+async def main():
+    # Create service
+    memory_service = InMemoryMemoryService()
+
+    # Start service
+    await memory_service.start()
+
+    # Check service health
+    is_healthy = await memory_service.health()
+    print(f"Service health status: {is_healthy}")
+
+    # Stop service
+    await memory_service.stop()
+
+await main()
+```
+
+## Available Services
 
 ### SessionHistoryService
 
-`SessionHistoryService` is a base class to manage the session history.
-It contains the following methods
+`SessionHistoryService` manages conversation sessions for users, providing a structured way to handle conversation history and message storage. Each session contains the history of a conversation and is uniquely identified by its ID.
 
-- `create_session`: create a new session
-- `get_session`: get a session
-- `delete_session`: delete a session
-- `list_sessions`: list all sessions
-- `append_message`: append a message to the history
+#### Service Overview
 
-Since the `SessionHistoryService` is a base class, use a concrete implementation instead.
-For example, we provide an `InMemorySessionHistoryService` to store history in memory. For details, see {ref}`here <session-history-service>`
+The Session Service provides an abstract interface for session management with concrete implementations like `InMemorySessionHistoryService`.
+
+```{code-cell}
+from agentscope_runtime.engine.services.session_history import InMemorySessionHistoryService
+from agentscope_runtime.engine.schemas.session import Session
+
+# Create a session service instance
+session_history_service = InMemorySessionHistoryService()
+```
+
+#### Core Functionality
+
+- `create_session`: Create a new session
+- `get_session`: Get a session
+- `delete_session`: Delete a session
+- `list_sessions`: List all sessions
+- `append_message`: Append a message to the history
+
+For details, see {ref}`here <session-history-service>`
 
 ### MemoryService
 
-The `MemoryService` is a basic class to manage the memory.
-In Agent, memory stores previous conversation of an end-user.
-For example, an end-user may mention their name in a previous conversation.
-The memory service will store it so that the agent can use it in the next conversation.
+The `MemoryService` manages long-term memory storage. In Agent, memory stores previous conversation of an end-user. For example, an end-user may mention their name in a previous conversation. The memory service will store it so that the agent can use it in the next conversation.
 
-The `MemoryService` contains the following methods:
-- `add_memory`: add a memory to the memory service
-- `search_memory`: search a memory from the memory service
-- `delete_memory`: delete a memory from the memory service
-- `list_memory`: list all memories
+#### Service Overview
 
-Like `SessionHistoryService`, prefer using a concrete implementation such as `InMemoryMemoryService`. For details, see {ref}`here <memory-service>`
+The Memory Service provides an abstract interface for memory management with concrete implementations like `InMemoryMemoryService`.
 
-## Life-cycle of a context manager
-The context manager can be initialized by two ways:
-
-### Initialize an instance directly
-The simplest way is to initialize an instance directly.
 ```{code-cell}
-from agentscope_runtime.engine.services.context_manager import ContextManager
-from agentscope_runtime.engine.services.session_history_service import InMemorySessionHistoryService
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
 
-session_history_service = InMemorySessionHistoryService()
+# Create and start the memory service
 memory_service = InMemoryMemoryService()
-context_manager = ContextManager(
-    session_history_service=session_history_service,
-    memory_service=memory_service
-)
-
-# use the manager
-async with context_manager as services:
-    session = await services.compose_session(user_id="u1", session_id="s1")
-    await services.compose_context(session, request_input=[])
 ```
 
-### Use the async factory helper
-We provide a factory function to create a context manager.
-```{code-cell}
-from agentscope_runtime.engine.services.context_manager import create_context_manager
-from agentscope_runtime.engine.services.session_history_service import InMemorySessionHistoryService
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
+#### Core Functionality
 
-async with create_context_manager(
-    session_history_service=InMemorySessionHistoryService(),
-    memory_service=InMemoryMemoryService(),
-) as manager:
-    session = await manager.compose_session(user_id="u1", session_id="s1")
-    await manager.compose_context(session, request_input=[])
-```
+- `add_memory`: Add a memory to the memory service
+- `search_memory`: Search a memory from the memory service
+- `delete_memory`: Delete a memory from the memory service
+- `list_memory`: List all memories
 
-## ContextComposer
-The `ContextComposer` is a class to compose the context.
-It will be called by the context manager when the context is created.
-The `ContextComposer` contains a static method:
-- `compose`: compose the context
+For details, see {ref}`here <memory-service>`
 
-It provides a sequential composition method and can be overridden by subclasses.
+### SandboxService
 
-Pass a custom composer class to `ContextManager` when initializing.
+The **Sandbox Service** manages and provides access to sandboxed tool execution environments for different users and sessions. Sandboxes are organized by a composite key of session ID and user ID, allowing isolated execution contexts for each user session.
+
+#### Service Overview
+
+The Sandbox Service provides a unified interface for sandbox management with support for different sandbox types like code execution, file operations, and other specialized sandboxes.
 
 ```{code-cell}
-from agentscope_runtime.engine.services.context_manager import ContextManager, ContextComposer
-from agentscope_runtime.engine.services.session_history_service import InMemorySessionHistoryService
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
+from agentscope_runtime.engine.services.sandbox_service import SandboxService
 
-async with ContextManager(
-    session_history_service=InMemorySessionHistoryService(),
-    memory_service=InMemoryMemoryService(),
-    context_composer_cls=ContextComposer,
-) as manager:
-    session = await manager.compose_session(user_id="u1", session_id="s1")
-    await manager.compose_context(session, request_input=[])
+# Create and start the sandbox service
+sandbox_service = SandboxService()
+
+# Or with remote sandbox service
+# sandbox_service = SandboxService(
+#     base_url="http://sandbox-server:8000",
+#     bearer_token="your-auth-token"
+# )
 ```
 
-## Appending outputs to context
+#### Core Functionality
+
+- `connect`: Connect to sandboxes for a specific user session
+- `release`: Release sandboxes when no longer needed
+
+For details, see {doc}`sandbox` and {doc}`environment_manager`.
+
+### StateService
+
+The `StateService` manages agent state storage. It stores and manages agent states organized by user_id, session_id, and round_id. Supports saving, retrieving, listing, and deleting states.
+
+#### Service Overview
+
+The State Service provides an abstract interface for state management with concrete implementations like `InMemoryStateService`.
 
 ```{code-cell}
-from agentscope_runtime.engine.services.context_manager import create_context_manager
+from agentscope_runtime.engine.services.agent_state.state_service import InMemoryStateService
 
-async with create_context_manager() as manager:
-    session = await manager.compose_session(user_id="u1", session_id="s1")
-    await manager.append(session, event_output=[])
+# Create and start the state service
+state_service = InMemoryStateService()
 ```
+
+#### Core Functionality
+
+- `save_state`: Save serialized state data for a specific user/session
+- `export_state`: Retrieve serialized state data for a user/session
 
 ## Available Memory Services
+
 |         MemoryType         | Import                                                                                             |                       Note                       |
 |:--------------------------:|----------------------------------------------------------------------------------------------------|:------------------------------------------------:|
-|   InMemoryMemoryService    | `from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService`              |                                                  |
+|   InMemoryMemoryService    | `from agentscope_runtime.engine.services.memory import InMemoryMemoryService`              |                                                  |
 |     RedisMemoryService     | `from agentscope_runtime.engine.services.redis_memory_service import RedisMemoryService`           |                                                  |
 | ReMe.PersonalMemoryService | `from reme_ai.service.personal_memory_service import PersonalMemoryService`                        | [User Guide](https://github.com/modelscope/ReMe) |
 |   ReMe.TaskMemoryService   | `from reme_ai.service.task_memory_service import TaskMemoryService`                                | [User Guide](https://github.com/modelscope/ReMe) |
-| Mem0MemoryService | `from agentscope_runtime.engine.services.mem0_memory_service import Mem0MemoryService`             |                   |
-| TablestoreMemoryService | `from agentscope_runtime.engine.services.tablestore_memory_service import TablestoreMemoryService` |        develop by [tablestore-for-agent-memory](https://github.com/aliyun/alibabacloud-tablestore-for-agent-memory/blob/main/python/docs/knowledge_store_tutorial.ipynb)                          |
+| Mem0MemoryService | `from agentscope_runtime.engine.services.memory import Mem0MemoryService`             |                   |
+| TablestoreMemoryService | `from agentscope_runtime.engine.services.memory import TablestoreMemoryService` |        develop by [tablestore-for-agent-memory](https://github.com/aliyun/alibabacloud-tablestore-for-agent-memory/blob/main/python/docs/knowledge_store_tutorial.ipynb)                          |
 
 ### Description
 - **InMemoryMemoryService**: An in-memory memory service without persistent storage.
@@ -149,7 +185,7 @@ async with create_context_manager() as manager:
 - **Mem0MemoryService**: An intelligent memory service powered by the mem0 platform, providing long-term memory storage and management capabilities. Supports asynchronous operations and automatically extracts, stores, and retrieves key information from conversations, enabling context-aware memory for AI agents. Ideal for complex conversational scenarios and agent applications requiring persistent memory. (For more details, see [mem0 platform documentation](https://docs.mem0.ai/platform/quickstart))
 - **TablestoreMemoryService**: A memory service based on aliyun tablestore (Tablestore provides Serverless table storage services for massive structured data, and provides a one-stop IoTstore solution for deep optimization of IoT scenarios. It is suitable for structured data storage in scenarios such as massive bills, IM messages, IoT, Internet of Vehicles, risk control, and recommendations, and provides low-cost storage of massive data, millisecond-level online data query and retrieval, and flexible data analysis capabilities), develop by [tablestore-for-agent-memory](https://github.com/aliyun/alibabacloud-tablestore-for-agent-memory/blob/main/python/docs/knowledge_store_tutorial.ipynb). Example:
 ```python
-from agentscope_runtime.engine.services.tablestore_memory_service import TablestoreMemoryService
+from agentscope_runtime.engine.services.memory import TablestoreMemoryService
 from agentscope_runtime.engine.services.utils.tablestore_service_utils import create_tablestore_client
 from agentscope_runtime.engine.services.tablestore_memory_service import SearchStrategy
 
@@ -181,23 +217,12 @@ tablestore_memory_service = TablestoreMemoryService(
 
 The Session History Service manages conversation sessions for users, providing a structured way to handle conversation history and message storage. Each session contains the history of a conversation and is uniquely identified by its ID.
 
-### Service Overview
-
-The Session Service provides an abstract interface for session management with concrete implementations like `InMemorySessionHistoryService`.
-
-```{code-cell}
-from agentscope_runtime.engine.services.session_history_service import InMemorySessionHistoryService, Session
-
-# Create a session service instance
-session_history_service = InMemorySessionHistoryService()
-```
-
 ### Session Object Structure
 
 Each session is represented by a `Session` object with the following structure:
 
 ```{code-cell}
-from agentscope_runtime.engine.services.session_history_service import Session
+from agentscope_runtime.engine.schemas.session import Session
 from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent, Role
 
 # Session object structure
@@ -325,80 +350,6 @@ async def main():
 await main()
 ```
 
-##### Using Built-in Message Format
-
-```{code-cell}
-from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent, MessageType, Role
-
-# Create a session
-user_id = "u_append"
-session = await session_history_service.create_session(user_id)
-
-# Add a single message using built-in Message format
-message1 = Message(
-    type=MessageType.MESSAGE,
-    role=Role.USER,
-    content=[TextContent(type="text", text="Hello, world!")]
-)
-await session_history_service.append_message(session, message1)
-
-# Verify the message was added
-assert len(session.messages) == 1
-# Session stores actual Message objects in memory for the in-memory impl
-assert session.messages[0].role == "user"
-assert session.messages[0].content[0].text == "Hello, world!"
-
-# Add assistant reply message
-message2 = Message(
-    type=MessageType.MESSAGE,
-    role=Role.ASSISTANT,
-    content=[TextContent(type="text", text="Hi there! How can I help you?")]
-)
-await session_history_service.append_message(session, message2)
-
-# Add multiple built-in Message format messages at once
-messages3 = [
-    Message(
-        type=MessageType.MESSAGE,
-        role=Role.USER,
-        content=[TextContent(type="text", text="What's the weather like?")]
-    ),
-    Message(
-        type=MessageType.MESSAGE,
-        role=Role.ASSISTANT,
-        content=[TextContent(type="text", text="I don't have access to real-time weather data.")]
-    )
-]
-await session_history_service.append_message(session, messages3)
-
-# Verify all messages were added
-assert len(session.messages) == 4
-```
-
-##### Mixed Format Support
-
-```{code-cell}
-# Session service supports mixing dictionary and Message objects
-session = await session_history_service.create_session(user_id)
-
-# Add dictionary format message
-dict_message = {"role": "user", "content": "Hello"}
-await session_history_service.append_message(session, dict_message)
-
-# Add Message object
-message_obj = Message(
-    type=MessageType.MESSAGE,
-    role=Role.ASSISTANT,
-    content=[TextContent(type="text", text="Hello! How can I assist you?")]
-)
-await session_history_service.append_message(session, message_obj)
-
-# Verify messages were added correctly
-assert len(session.messages) == 2
-assert session.messages[0]["role"] == "user"  # Dictionary format
-assert session.messages[1]["role"] == "assistant"  # Message object converted to dictionary format
-```
-
 #### Deleting Sessions
 
 The `delete_session` method removes specific sessions:
@@ -447,7 +398,7 @@ The `InMemorySessionHistoryService` stores data in a nested dictionary structure
 
 `TablestoreSessionHistoryService` stores data in aliyun tablestore, example：
 ```python
-from agentscope_runtime.engine.services.tablestore_session_history_service import TablestoreSessionHistoryService
+from agentscope_runtime.engine.services.session_history import TablestoreSessionHistoryService
 from agentscope_runtime.engine.services.utils.tablestore_service_utils import create_tablestore_client
 
 tablestore_session_history_service = TablestoreSessionHistoryService(
@@ -471,18 +422,6 @@ For production use, consider implementing persistent storage by extending the `S
 The Memory Service is designed to store and retrieve long-term memory from databases or in-memory storage.
 Memory is organized by user ID at the top level, with the message list serving as the elemental values stored in different locations. Additionally, messages can be grouped by session ID.
 
-### Service Overview
-
-The Memory Service provides an abstract interface for memory management with concrete implementations like `InMemoryMemoryService`.
-The following is an example to initialize an in-memory service:
-
-```{code-cell}
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
-
-# Create and start the memory service
-memory_service = InMemoryMemoryService()
-```
-
 ### Core Functionality
 
 #### Adding Memory
@@ -491,7 +430,7 @@ The `add_memory` method allows you to store messages for a specific user, option
 
 ```{code-cell}
 import asyncio
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
 from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent
 
 # Add memory without a session ID
@@ -554,41 +493,13 @@ await memory_service.delete_memory(user_id)
 
 ### Service Lifecycle
 
-#### Managing Lifecycle through ContextManager
-
-When using ContextManager, memory service lifecycle is automatically managed:
-
-```{code-cell}
-import asyncio
-from agentscope_runtime.engine.services.context_manager import create_context_manager
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
-
-async def main():
-    async with create_context_manager() as context_manager:
-        # Register memory service - automatically started
-        context_manager.register(InMemoryMemoryService, name="memory")
-
-        # Service is automatically started and ready to use
-        memory_service = context_manager.memory
-
-        # Check service health status
-        health_status = await context_manager.health_check()
-        print(f"Memory service health status: {health_status['memory']}")
-
-        # Use service...
-
-    # When exiting context, service automatically stops and cleans up
-
-await main()
-```
-
 #### Service Lifecycle Management
 
 The Memory Service follows a standard lifecycle pattern and can be managed through `start()`, `stop()`, `health()`:
 
 ```{code-cell}
 import asyncio
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
 
 async def main():
     # Create memory service

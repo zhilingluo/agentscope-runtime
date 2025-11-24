@@ -16,10 +16,8 @@ parts:
   - file: en/react_agent.md
   - file: en/agent_app.md
   - file: en/protocol.md
-  - file: en/manager.md
-    sections:
-      - file: en/context_manager.md
-      - file: en/environment_manager.md
+  - file: en/context_manager.md
+  - file: en/environment_manager.md
   - file: en/tracing.md
   - file: en/demohouse.md
   - file: en/contribute.md
@@ -56,10 +54,8 @@ parts:
   - file: zh/react_agent.md
   - file: zh/agent_app.md
   - file: zh/protocol.md
-  - file: zh/manager.md
-    sections:
-      - file: zh/context_manager.md
-      - file: zh/environment_manager.md
+  - file: zh/context_manager.md
+  - file: zh/environment_manager.md
   - file: zh/tracing.md
   - file: zh/demohouse.md
   - file: zh/contribute.md

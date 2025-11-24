@@ -13,26 +13,79 @@ kernelspec:
 
 ---
 
-# 上下文管理器 (Context Manager)
+# 服务 (Services)
 
 ## 概述
 
-上下文管理器提供了一种方便的方式来管理上下文生命周期。 它包含：
+AgentScope Runtime 中的服务为智能体执行提供基本功能，包括会话历史管理、记忆存储、沙箱管理和状态管理。所有服务都实现了 `ServiceWithLifecycleManager` 接口，该接口提供标准的生命周期管理方法：`start()`、`stop()` 和 `health()`。
 
-- 一组上下文服务（会话历史、记忆）
-- 一个`ContextComposer`来编排历史和记忆更新
+## 服务接口
 
-## 服务 (Services)
+所有服务必须实现 `ServiceWithLifecycleManager` 接口：
 
-上下文管理器中的`services` 是上下文所需的服务。 例如，如果你想使用上下文管理器来管理会话历史，你需要将 `SessionHistoryService` 添加到服务列表中。
+```{code-cell}
+from agentscope_runtime.engine.services.base import ServiceWithLifecycleManager
 
-我们提供了一些基本的内置服务供你使用，你也可以创建自己的服务。
+class MockService(ServiceWithLifecycleManager):
+    def __init__(self, name: str):
+        self.name = name
+        self.started = False
+        self.stopped = False
 
-以下是内置服务：
+    async def start(self):
+        self.started = True
+
+    async def stop(self):
+        self.stopped = True
+
+    async def health(self) -> bool:
+        return self.started and not self.stopped
+```
+
+### 服务生命周期
+
+服务遵循标准的生命周期模式：
+
+```{code-cell}
+import asyncio
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
+
+async def main():
+    # 创建服务
+    memory_service = InMemoryMemoryService()
+
+    # 启动服务
+    await memory_service.start()
+
+    # 检查服务健康状态
+    is_healthy = await memory_service.health()
+    print(f"Service health status: {is_healthy}")
+
+    # 停止服务
+    await memory_service.stop()
+
+await main()
+```
+
+## 可用服务
 
 ### SessionHistoryService
 
-`SessionHistoryService` 是管理会话历史的基础类。 它包含以下方法：
+`SessionHistoryService` 管理用户的对话会话，提供处理对话历史和消息存储的结构化方式。每个会话包含一个对话的历史记录，并通过其ID唯一标识。
+
+#### 服务概述
+
+会话服务为会话管理提供了抽象接口，具体实现如`InMemorySessionHistoryService`。
+
+```{code-cell}
+from agentscope_runtime.engine.services.session_history import InMemorySessionHistoryService
+from agentscope_runtime.engine.schemas.session import Session
+
+# 创建会话历史服务实例
+session_history_service = InMemorySessionHistoryService()
+```
+
+#### 核心功能
 
 - `create_session`：创建新会话
 - `get_session`：获取会话
@@ -40,107 +93,90 @@ kernelspec:
 - `list_sessions`：列出所有会话
 - `append_message`：向历史中添加消息
 
-由于`SessionHistoryService`是基础类，请使用具体的实现。 例如，我们提供了 `InMemorySessionHistoryService` 来在内存中存储历史。详细信息请参见 {ref}`这里 <session-history-service-zh>`
+详细信息请参见 {ref}`这里 <session-history-service-zh>`
 
 ### MemoryService
 
-`MemoryService`是管理记忆的基础类。 在Agent 中，记忆储终端用户之前的对话。 例如，终端用户可能在之前的对话中提到他们的姓名。 记忆服务会存储这些信息，以便智能体在下次对话中使用。
+`MemoryService` 管理长期记忆存储。在Agent 中，记忆储存终端用户之前的对话。 例如，终端用户可能在之前的对话中提到他们的姓名。 记忆服务会存储这些信息，以便智能体在下次对话中使用。
 
- `MemoryService` 包含以下方法：
+#### 服务概述
+
+记忆服务为记忆管理提供了抽象接口，具体实现如 `InMemoryMemoryService`。
+
+```{code-cell}
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
+
+# 创建并启动记忆服务
+memory_service = InMemoryMemoryService()
+```
+
+#### 核心功能
 
 - `add_memory`：向记忆服务添加记忆
 - `search_memory`：从记忆服务中搜索记忆
 - `delete_memory`：从记忆服务中删除记忆
 - `list_memory`：列出所有记忆
 
-与 `SessionHistoryService`一样，优先使用具体实现，如`InMemoryMemoryService`。详细信息请参见{ref}`这里 <memory-service-zh>`
+详细信息请参见{ref}`这里 <memory-service-zh>`
 
-## 上下文管理器的生命周期
+### SandboxService
 
-上下文管理器可以通过两种方式初始化：
+**沙箱服务** 管理并为不同用户和会话提供沙箱化工具执行环境的访问。沙箱通过会话ID和用户ID的复合键组织，为每个用户会话提供隔离的执行上下文。
 
-### 直接初始化实例
+#### 服务概述
 
-最简单的方式是直接初始化实例。
-
-```{code-cell}
-from agentscope_runtime.engine.services.context_manager import ContextManager
-from agentscope_runtime.engine.services.session_history_service import InMemorySessionHistoryService
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
-
-session_history_service = InMemorySessionHistoryService()
-memory_service = InMemoryMemoryService()
-context_manager = ContextManager(
-    session_history_service=session_history_service,
-    memory_service=memory_service
-)
-
-# 使用管理器
-async with context_manager as services:
-    session = await services.compose_session(user_id="u1", session_id="s1")
-    await services.compose_context(session, request_input=[])
-```
-
-### 使用异步工厂助手
-
-我们提供了一个工厂函数来创建上下文管理器。
+沙箱服务为沙箱管理提供统一接口，支持不同类型的沙箱，如代码执行、文件操作和其他专用沙箱。
 
 ```{code-cell}
-from agentscope_runtime.engine.services.context_manager import create_context_manager
-from agentscope_runtime.engine.services.session_history_service import InMemorySessionHistoryService
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
+from agentscope_runtime.engine.services.sandbox_service import SandboxService
 
-async with create_context_manager(
-    session_history_service=InMemorySessionHistoryService(),
-    memory_service=InMemoryMemoryService(),
-) as manager:
-    session = await manager.compose_session(user_id="u1", session_id="s1")
-    await manager.compose_context(session, request_input=[])
+# 创建并启动沙箱服务
+sandbox_service = SandboxService()
+
+# 或使用远程沙箱服务
+# sandbox_service = SandboxService(
+#     base_url="http://sandbox-server:8000",
+#     bearer_token="your-auth-token"
+# )
 ```
 
-## ContextComposer
+#### 核心功能
 
- `ContextComposer` 是用于组合上下文的类。 它将在上下文管理器创建上下文时被调用。`ContextComposer` 包含一个静态方法：
+- `connect`：连接到特定用户会话的沙箱
+- `release`：在不再需要时释放沙箱
 
-- `compose`: 组合上下文
+详细信息请参见 {doc}`sandbox` 和 {doc}`environment_manager`。
 
-它提供了一个顺序组合方法，可以被子类重写。
+### StateService
 
-在初始化时向 `ContextManager` 传递自定义组合器类。
+`StateService` 管理智能体状态存储。它按 user_id、session_id 和 round_id 组织存储和管理智能体状态。支持保存、检索、列出和删除状态。
+
+#### 服务概述
+
+状态服务为状态管理提供抽象接口，具体实现如 `InMemoryStateService`。
 
 ```{code-cell}
-from agentscope_runtime.engine.services.context_manager import ContextManager, ContextComposer
-from agentscope_runtime.engine.services.session_history_service import InMemorySessionHistoryService
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
+from agentscope_runtime.engine.services.agent_state.state_service import InMemoryStateService
 
-async with ContextManager(
-    session_history_service=InMemorySessionHistoryService(),
-    memory_service=InMemoryMemoryService(),
-    context_composer_cls=ContextComposer,
-) as manager:
-    session = await manager.compose_session(user_id="u1", session_id="s1")
-    await manager.compose_context(session, request_input=[])
+# 创建并启动状态服务
+state_service = InMemoryStateService()
 ```
 
-## 向上下文添加输出
+#### 核心功能
 
-```{code-cell}
-from agentscope_runtime.engine.services.context_manager import create_context_manager
-
-async with create_context_manager() as manager:
-    session = await manager.compose_session(user_id="u1", session_id="s1")
-    await manager.append(session, event_output=[])
-```
+- `save_state`：为特定用户/会话保存序列化状态数据
+- `export_state`：检索用户/会话的序列化状态数据
 
 ## 可用的记忆服务
+
 |            记忆类型            | 导入语句                                                                                               |                     说明                     |
 |:--------------------------:|----------------------------------------------------------------------------------------------------|:------------------------------------------:|
-|   InMemoryMemoryService    | `from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService`              |                                            |
+|   InMemoryMemoryService    | `from agentscope_runtime.engine.services.memory import InMemoryMemoryService`              |                                            |
 |     RedisMemoryService     | `from agentscope_runtime.engine.services.redis_memory_service import RedisMemoryService`           |                                            |
 | ReMe.PersonalMemoryService | `from reme_ai.service.personal_memory_service import PersonalMemoryService`                        | [用户指南](https://github.com/modelscope/ReMe) |
 |   ReMe.TaskMemoryService   | `from reme_ai.service.task_memory_service import TaskMemoryService`                                | [用户指南](https://github.com/modelscope/ReMe) |
-| Mem0MemoryService | `from agentscope_runtime.engine.services.mem0_memory_service import Mem0MemoryService`             |                   |
-| TablestoreMemoryService | `from agentscope_runtime.engine.services.tablestore_memory_service import TablestoreMemoryService` |        通过[tablestore-for-agent-memory](https://github.com/aliyun/alibabacloud-tablestore-for-agent-memory/blob/main/python/docs/knowledge_store_tutorial.ipynb)开发实现                                              |
+| Mem0MemoryService | `from agentscope_runtime.engine.services.memory import Mem0MemoryService`             |                   |
+| TablestoreMemoryService | `from agentscope_runtime.engine.services.memory import TablestoreMemoryService` |        通过[tablestore-for-agent-memory](https://github.com/aliyun/alibabacloud-tablestore-for-agent-memory/blob/main/python/docs/knowledge_store_tutorial.ipynb)开发实现                                              |
 
 ### 描述
 - **InMemoryMemoryService**: 一种内存内记忆服务，无持久化存储。
@@ -150,7 +186,7 @@ async with create_context_manager() as manager:
 - **Mem0MemoryService**: 基于 mem0 平台的智能记忆服务，提供长期记忆存储与管理功能。支持异步操作，可自动提取、存储和检索对话中的关键信息，为 AI 智能体提供上下文感知的记忆能力。适用于需要持久化记忆的复杂对话场景和智能体应用。(具体可参考 [mem0 平台文档](https://docs.mem0.ai/platform/quickstart))
 - **TablestoreMemoryService**: 基于阿里云表格存储的记忆服务（Tablestore 为海量结构化数据提供 Serverless 表存储服务，并为物联网（IoT）场景深度优化提供一站式 IoTstore 解决方案。它适用于海量账单、即时消息（IM）、物联网（IoT）、车联网、风控和推荐等场景中的结构化数据存储，提供海量数据的低成本存储、毫秒级在线数据查询检索和灵活的数据分析能力）, 通过[tablestore-for-agent-memory](https://github.com/aliyun/alibabacloud-tablestore-for-agent-memory/blob/main/python/docs/knowledge_store_tutorial.ipynb)开发实现。使用示例：
 ```python
-from agentscope_runtime.engine.services.tablestore_memory_service import TablestoreMemoryService
+from agentscope_runtime.engine.services.memory import TablestoreMemoryService
 from agentscope_runtime.engine.services.utils.tablestore_service_utils import create_tablestore_client
 from agentscope_runtime.engine.services.tablestore_memory_service import SearchStrategy
 
@@ -182,23 +218,12 @@ tablestore_memory_service = TablestoreMemoryService(
 
 会话历史服务管理用户的对话会话，提供处理对话历史和消息存储的结构化方式。每个会话包含一个对话的历史记录，并通过其ID唯一标识。
 
-### 服务概述
-
-会话服务为会话管理提供了抽象接口，具体实现如`InMemorySessionHistoryService`。
-
-```{code-cell}
-from agentscope_runtime.engine.services.session_history_service import InMemorySessionHistoryService, Session
-
-# 创建会话历史服务实例
-session_history_service = InMemorySessionHistoryService()
-```
-
 ### 会话对象结构
 
 每个会话由具有以下结构的`Session` 对象表示：
 
 ```{code-cell}
-from agentscope_runtime.engine.services.session_history_service import Session
+from agentscope_runtime.engine.schemas.session import Session
 from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent, Role
 
 # 会话对象结构
@@ -326,80 +351,6 @@ async def main():
 await main()
 ```
 
-##### 使用内置消息格式
-
-```{code-cell}
-from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent, MessageType, Role
-
-# 创建会话
-user_id = "u_append"
-session = await session_history_service.create_session(user_id)
-
-# 使用内置Message格式添加单个消息
-message1 = Message(
-    type=MessageType.MESSAGE,
-    role=Role.USER,
-    content=[TextContent(type="text", text="Hello, world!")]
-)
-await session_history_service.append_message(session, message1)
-
-# 验证消息已添加
-assert len(session.messages) == 1
-# Session stores actual Message objects in memory for the in-memory impl
-assert session.messages[0].role == "user"
-assert session.messages[0].content[0].text == "Hello, world!"
-
-# 添加助手回复消息
-message2 = Message(
-    type=MessageType.MESSAGE,
-    role=Role.ASSISTANT,
-    content=[TextContent(type="text", text="Hi there! How can I help you?")]
-)
-await session_history_service.append_message(session, message2)
-
-# 一次添加多个内置Message格式消息
-messages3 = [
-    Message(
-        type=MessageType.MESSAGE,
-        role=Role.USER,
-        content=[TextContent(type="text", text="What's the weather like?")]
-    ),
-    Message(
-        type=MessageType.MESSAGE,
-        role=Role.ASSISTANT,
-        content=[TextContent(type="text", text="I don't have access to real-time weather data.")]
-    )
-]
-await session_history_service.append_message(session, messages3)
-
-# 验证所有消息都已添加
-assert len(session.messages) == 4
-```
-
-##### 混合格式支持
-
-```{code-cell}
-# 会话服务支持混合字典和Message对象
-session = await session_history_service.create_session(user_id)
-
-# 添加字典格式消息
-dict_message = {"role": "user", "content": "Hello"}
-await session_history_service.append_message(session, dict_message)
-
-# 添加Message对象
-message_obj = Message(
-    type=MessageType.MESSAGE,
-    role=Role.ASSISTANT,
-    content=[TextContent(type="text", text="Hello! How can I assist you?")]
-)
-await session_history_service.append_message(session, message_obj)
-
-# 验证消息正确添加
-assert len(session.messages) == 2
-assert session.messages[0]["role"] == "user"  # Dictionary format
-assert session.messages[1]["role"] == "assistant"  # Message object converted to dictionary format
-```
-
 #### 删除会话
 
 `delete_session`方法删除特定会话：
@@ -448,7 +399,7 @@ await session_history_service.stop()
 
 `TablestoreSessionHistoryService`将数据存储在阿里云表格存储，使用示例：
 ```python
-from agentscope_runtime.engine.services.tablestore_session_history_service import TablestoreSessionHistoryService
+from agentscope_runtime.engine.services.session_history import TablestoreSessionHistoryService
 from agentscope_runtime.engine.services.utils.tablestore_service_utils import create_tablestore_client
 
 tablestore_session_history_service = TablestoreSessionHistoryService(
@@ -471,17 +422,6 @@ tablestore_session_history_service = TablestoreSessionHistoryService(
 
 记忆服务设计用于从数据库或内存存储中存储和检索长期记忆。 记忆在顶层按用户ID组织，消息列表作为存储在不同位置的基本值。此外，消息可以按会话ID分组。
 
-### 服务概述
-
-记忆服务为记忆管理提供了抽象接口，具体实现如 `InMemoryMemoryService`。 以下是初始化记忆服务的示例：
-
-```{code-cell}
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
-
-# 创建并启动记忆服务
-memory_service = InMemoryMemoryService()
-```
-
 ### 核心功能
 
 #### 添加记忆
@@ -490,7 +430,7 @@ memory_service = InMemoryMemoryService()
 
 ```{code-cell}
 import asyncio
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
 from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent
 
 # 不带会话ID添加记忆
@@ -548,41 +488,13 @@ await memory_service.delete_memory(user_id)
 
 ### 服务生命周期
 
-#### 通过ContextManager管理生命周期
-
-使用`ContextManager`时，记忆服务生命周期会自动管理：
-
-```{code-cell}
-import asyncio
-from agentscope_runtime.engine.services.context_manager import create_context_manager
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
-
-async def main():
-    async with create_context_manager() as context_manager:
-        # 注册记忆服务 - 自动启动
-        context_manager.register(InMemoryMemoryService, name="memory")
-
-        # 服务自动启动并准备使用
-        memory_service = context_manager.memory
-
-        # 检查服务健康状态
-        health_status = await context_manager.health_check()
-        print(f"Memory service health status: {health_status['memory']}")
-
-        # 使用服务...
-
-    # 退出上下文时，服务自动停止并清理
-
-await main()
-```
-
 #### 服务生命周期管理
 
 记忆服务遵循标准的生命周期模式，可以通过`start()`、`stop()`、`health()` 管理：
 
 ```{code-cell}
 import asyncio
-from agentscope_runtime.engine.services.memory_service import InMemoryMemoryService
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
 
 async def main():
     # 创建记忆服务

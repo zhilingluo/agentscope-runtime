@@ -12,14 +12,12 @@ This chapter introduces the core concepts of AgentScope Runtime, which provides 
 
 The engine module in AgentScope Runtime uses a modular architecture with several key components:
 
-<img src="/_static/agent_architecture.jpg" alt="Installation Options" style="zoom:25%;" />
+<img src="/_static/agent_architecture.jpg" alt="Agent Architecture" style="zoom:25%;" />
 
-+ **Agent**: The core AI component that processes requests and generates responses (can be LLM-based, workflow-based, or custom implementations, such as Agentscope, Agno, LangGraph)
++ **Agent**: The core AI component that processes requests and generates responses (can be LLM-based, workflow-based, or custom implementations, such as Agentscope)
 + **AgentApp**: Inherits from the FastAPI App and serves as the application entry point. It is responsible for providing external API interfaces, registering routes, loading configurations, and delegating incoming requests to the Runner for execution.
-+ **Runner**: Orchestrates the agent execution and manages deployment at runtime
-+ **Context**: Contains all the information needed for agent execution
-+ **Context & Env Manager**: Provide additional functional services management, such as session history management, long-term memory management, and sandbox management.
-+ **Deployer**: Deploy the Runner as a service
++ **Runner**: Orchestrates the agent execution and manages deployment at runtime. It handles agent lifecycle, session management, streaming responses, and service deployment.
++ **Deployer**: Deploys the Runner as a service with health checks, monitoring, lifecycle management, real-time response streaming with SSE, error handling, logging, and graceful shutdown.
 
 ### Key Components
 
@@ -43,35 +41,20 @@ Its responsibilities include:
 
 The `Runner` class provides a flexible and scalable runtime that orchestrates agent execution and offers deployment capabilities. It manages:
 
-+ Agent lifecycle
-+ Session management
++ Agent lifecycle through `init_handler` and `shutdown_handler`
++ Request processing through `query_handler`
 + Streaming responses
-+ Service deployment
++ Service deployment via `deploy()` method
 
-#### 4. Context
+#### 4. Deployer
 
-The `Context` object contains all the information needed for agent execution:
+The `Deployer` (implemented as `DeployManager`) provides production-ready deployment capabilities:
 
-+ Agent instance
-+ Session information
-+ User request
-+ Service instances
-
-#### 5. Context & Env Manager
-
-Includes `ContextManager` and `EnvironmentManager`:
-
-- `ContextManager`: Provides session history management and long-term memory management.
-- `EnvironmentManager`: Provides sandbox lifecycle management.
-
-#### 6. Deployer
-
-The `Deployer` system provides production-ready deployment capabilities:
-
-+ Deploy Runner as a service.
++ Deploy Runner as a service
 + Health checks, monitoring, and lifecycle management
 + Real-time response streaming with SSE
 + Error handling, logging, and graceful shutdown
++ Support for multiple deployment modes (local, containerized, Kubernetes, etc.)
 
 ## Sandbox Module Concepts
 

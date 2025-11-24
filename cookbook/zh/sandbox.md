@@ -356,8 +356,38 @@ with TrainingSandbox() as box:
     print(profile_list)
 ```
 
+* **云沙箱（Cloud Sandbox）**：基于云服务的沙箱环境，无需本地 Docker 容器。`CloudSandbox` 是云沙箱的基类，提供了云沙箱的统一接口。
+
+```{code-cell}
+from agentscope_runtime.sandbox import CloudSandbox
+
+# CloudSandbox 是抽象基类，通常不直接使用
+# 请使用具体的云沙箱实现，如 AgentbaySandbox
+```
+
+* **AgentBay 沙箱（AgentbaySandbox）**：基于 AgentBay 云服务的沙箱实现，支持多种镜像类型（Linux、Windows、Browser、CodeSpace、Mobile 等）。
+
+```{code-cell}
+from agentscope_runtime.sandbox import AgentbaySandbox
+
+# 使用 AgentBay 云沙箱（需要配置 API Key）
+with AgentbaySandbox(
+    api_key="your_agentbay_api_key",
+    image_id="linux_latest",  # 可选：指定镜像类型
+) as box:
+    print(box.list_tools())  # 列出所有可用工具
+    print(box.run_shell_command(command="echo hello from cloud"))
+    print(box.get_session_info())  # 获取会话信息
+```
+
+**AgentBay 沙箱特性**：
+- 无需本地 Docker，完全基于云服务
+- 支持多种环境类型（Linux、Windows、Browser 等）
+- 自动管理会话生命周期
+- 通过 API 直接与云服务通信
+
 ```{note}
-我们很快会扩展更多类型的沙箱——敬请期待！
+更多沙箱类型正在开发中，敬请期待！
 ```
 
 ### 向沙箱添加MCP服务器

@@ -354,8 +354,38 @@ with TrainingSandbox() as box:
     print(profile_list)
 ```
 
+* **Cloud Sandbox**: A cloud-based sandbox environment that doesn't require local Docker containers. `CloudSandbox` is the base class for cloud sandboxes, providing a unified interface.
+
+```{code-cell}
+from agentscope_runtime.sandbox import CloudSandbox
+
+# CloudSandbox is an abstract base class, typically not used directly
+# Please use specific cloud sandbox implementations, such as AgentbaySandbox
+```
+
+* **AgentBay Sandbox (AgentbaySandbox)**: A cloud sandbox implementation based on AgentBay cloud service, supporting multiple image types (Linux, Windows, Browser, CodeSpace, Mobile, etc.).
+
+```{code-cell}
+from agentscope_runtime.sandbox import AgentbaySandbox
+
+# Use AgentBay cloud sandbox (requires API key configuration)
+with AgentbaySandbox(
+    api_key="your_agentbay_api_key",
+    image_id="linux_latest",  # Optional: specify image type
+) as box:
+    print(box.list_tools())  # List all available tools
+    print(box.run_shell_command(command="echo hello from cloud"))
+    print(box.get_session_info())  # Get session information
+```
+
+**AgentBay Sandbox Features**:
+- No local Docker required, fully cloud-based
+- Supports multiple environment types (Linux, Windows, Browser, etc.)
+- Automatic session lifecycle management
+- Direct API communication with cloud service
+
 ```{note}
-We'll be expanding with more types of sandboxes soon—stay tuned!
+More sandbox types are under development—stay tuned!
 ```
 
 ### Add MCP Server to Sandbox

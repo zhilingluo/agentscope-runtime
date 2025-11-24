@@ -97,6 +97,8 @@ data: {"sequence_number":4,"object":"message","status":"completed","text":"Hello
 **功能**
 在应用启动前和停止后执行自定义逻辑，例如加载模型或关闭连接。
 
+### 方式1：使用参数传递
+
 **关键参数**
 
 - `before_start`：在 API 服务启动之前执行
@@ -117,6 +119,47 @@ app = AgentApp(
     after_finish=cleanup_resources
 )
 ```
+
+### 方式2：使用装饰器（推荐）
+
+除了使用参数传递，还可以使用装饰器方式注册生命周期钩子，这种方式更加灵活和直观：
+
+**用法示例**
+
+```{code-cell}
+from agentscope_runtime.engine import AgentApp
+from agentscope_runtime.engine.services.agent_state import InMemoryStateService
+from agentscope_runtime.engine.services.session_history import InMemorySessionHistoryService
+
+app = AgentApp(
+    app_name="Friday",
+    app_description="A helpful assistant",
+)
+
+@app.init
+async def init_func(self):
+    """初始化服务资源"""
+    self.state_service = InMemoryStateService()
+    self.session_service = InMemorySessionHistoryService()
+    
+    await self.state_service.start()
+    await self.session_service.start()
+    print("✅ 服务初始化完成")
+
+@app.shutdown
+async def shutdown_func(self):
+    """清理服务资源"""
+    await self.state_service.stop()
+    await self.session_service.stop()
+    print("✅ 服务资源已清理")
+```
+
+**装饰器说明**
+
+- `@app.init`：注册初始化钩子，在服务启动前执行
+- `@app.shutdown`：注册关闭钩子，在服务停止时执行
+- 装饰器函数接收 `self` 参数，可以访问 `AgentApp` 实例
+- 支持同步和异步函数
 
 ------
 
@@ -209,6 +252,265 @@ curl http://localhost:8090/longjob/abc123
 
 ------
 
+## 自定义查询处理
+
+**功能**
+使用 `@app.query()` 装饰器可以完全自定义查询处理逻辑，实现更灵活的控制，包括状态管理、会话历史管理等。
+
+### 基本用法
+
+```{code-cell}
+from agentscope_runtime.engine import AgentApp
+from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
+from agentscope.agent import ReActAgent
+from agentscope.model import DashScopeChatModel
+from agentscope.pipeline import stream_printing_messages
+from agentscope_runtime.adapters.agentscope.memory import AgentScopeSessionHistoryMemory
+
+app = AgentApp(
+    app_name="Friday",
+    app_description="A helpful assistant",
+)
+
+@app.query(framework="agentscope")
+async def query_func(
+    self,
+    msgs,
+    request: AgentRequest = None,
+    **kwargs,
+):
+    """自定义查询处理函数"""
+    session_id = request.session_id
+    user_id = request.user_id
+    
+    # 加载会话状态
+    state = await self.state_service.export_state(
+        session_id=session_id,
+        user_id=user_id,
+    )
+    
+    # 创建 Agent 实例
+    agent = ReActAgent(
+        name="Friday",
+        model=DashScopeChatModel(
+            "qwen-turbo",
+            api_key=os.getenv("DASHSCOPE_API_KEY"),
+            stream=True,
+        ),
+        sys_prompt="You're a helpful assistant named Friday.",
+        memory=AgentScopeSessionHistoryMemory(
+            service=self.session_service,
+            session_id=session_id,
+            user_id=user_id,
+        ),
+    )
+    
+    # 恢复状态（如果存在）
+    if state:
+        agent.load_state_dict(state)
+    
+    # 流式处理消息
+    async for msg, last in stream_printing_messages(
+        agents=[agent],
+        coroutine_task=agent(msgs),
+    ):
+        yield msg, last
+    
+    # 保存状态
+    state = agent.state_dict()
+    await self.state_service.save_state(
+        user_id=user_id,
+        session_id=session_id,
+        state=state,
+    )
+```
+
+### 关键特性
+
+1. **框架支持**：`framework` 参数支持 `"agentscope"`, `"autogen"`, `"agno"`, `"langgraph"` 等
+2. **函数签名**：
+   - `self`：AgentApp 实例，可以访问注册的服务
+   - `msgs`：输入消息列表
+   - `request`：AgentRequest 对象，包含 `session_id`, `user_id` 等信息
+   - `**kwargs`：其他扩展参数
+3. **流式输出**：函数可以是生成器，支持流式返回结果
+4. **状态管理**：可以访问 `self.state_service` 进行状态保存和恢复
+5. **会话历史**：可以访问 `self.session_service` 管理会话历史
+
+### 状态服务（StateService）详解
+
+`StateService` 用于管理智能体的状态，支持状态的保存、恢复和管理。在自定义查询处理中，您可以通过 `self.state_service` 访问状态服务。
+
+**主要方法**：
+
+- `save_state(user_id, state, session_id=None, round_id=None)`：保存智能体状态
+- `export_state(user_id, session_id=None, round_id=None)`：导出/加载智能体状态
+- `list_states(user_id, session_id=None)`：列出所有状态
+- `delete_state(user_id, session_id=None, round_id=None)`：删除状态
+
+**实现类**：
+
+- `InMemoryStateService`：内存实现，适合开发和测试
+- `RedisStateService`：Redis 实现，适合生产环境，支持持久化
+
+**使用示例**：
+
+```{code-cell}
+from agentscope_runtime.engine.services.agent_state import (
+    InMemoryStateService,
+    RedisStateService,
+)
+
+# 使用内存状态服务（开发环境）
+@app.init
+async def init_func(self):
+    self.state_service = InMemoryStateService()
+    await self.state_service.start()
+
+# 使用 Redis 状态服务（生产环境）
+@app.init
+async def init_func(self):
+    self.state_service = RedisStateService(
+        host="localhost",
+        port=6379,
+        db=0,
+    )
+    await self.state_service.start()
+
+# 在查询处理中使用状态服务
+@app.query(framework="agentscope")
+async def query_func(self, msgs, request: AgentRequest = None, **kwargs):
+    session_id = request.session_id
+    user_id = request.user_id
+    
+    # 加载历史状态
+    state = await self.state_service.export_state(
+        user_id=user_id,
+        session_id=session_id,
+    )
+    
+    # 创建 Agent 并恢复状态
+    agent = ReActAgent(...)
+    if state:
+        agent.load_state_dict(state)
+    
+    # 处理消息...
+    
+    # 保存状态
+    new_state = agent.state_dict()
+    await self.state_service.save_state(
+        user_id=user_id,
+        session_id=session_id,
+        state=new_state,
+    )
+```
+
+### 完整示例：带状态管理的 AgentApp
+
+```{code-cell}
+import os
+from agentscope_runtime.engine import AgentApp
+from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
+from agentscope.agent import ReActAgent
+from agentscope.model import DashScopeChatModel
+from agentscope.tool import Toolkit, execute_python_code
+from agentscope.pipeline import stream_printing_messages
+from agentscope_runtime.adapters.agentscope.memory import AgentScopeSessionHistoryMemory
+from agentscope_runtime.engine.services.agent_state import InMemoryStateService
+from agentscope_runtime.engine.services.session_history import InMemorySessionHistoryService
+
+app = AgentApp(
+    app_name="Friday",
+    app_description="A helpful assistant with state management",
+)
+
+@app.init
+async def init_func(self):
+    """初始化状态和会话服务"""
+    self.state_service = InMemoryStateService()
+    self.session_service = InMemorySessionHistoryService()
+    await self.state_service.start()
+    await self.session_service.start()
+
+@app.shutdown
+async def shutdown_func(self):
+    """清理服务"""
+    await self.state_service.stop()
+    await self.session_service.stop()
+
+@app.query(framework="agentscope")
+async def query_func(
+    self,
+    msgs,
+    request: AgentRequest = None,
+    **kwargs,
+):
+    """带状态管理的查询处理"""
+    session_id = request.session_id
+    user_id = request.user_id
+    
+    # 加载历史状态
+    state = await self.state_service.export_state(
+        session_id=session_id,
+        user_id=user_id,
+    )
+    
+    # 创建工具包
+    toolkit = Toolkit()
+    toolkit.register_tool_function(execute_python_code)
+    
+    # 创建 Agent
+    agent = ReActAgent(
+        name="Friday",
+        model=DashScopeChatModel(
+            "qwen-turbo",
+            api_key=os.getenv("DASHSCOPE_API_KEY"),
+            enable_thinking=True,
+            stream=True,
+        ),
+        sys_prompt="You're a helpful assistant named Friday.",
+        toolkit=toolkit,
+        memory=AgentScopeSessionHistoryMemory(
+            service=self.session_service,
+            session_id=session_id,
+            user_id=user_id,
+        ),
+    )
+    agent.set_console_output_enabled(enabled=False)
+    
+    # 恢复状态
+    if state:
+        agent.load_state_dict(state)
+    
+    # 流式处理
+    async for msg, last in stream_printing_messages(
+        agents=[agent],
+        coroutine_task=agent(msgs),
+    ):
+        yield msg, last
+    
+    # 保存状态
+    state = agent.state_dict()
+    await self.state_service.save_state(
+        user_id=user_id,
+        session_id=session_id,
+        state=state,
+    )
+
+# 运行服务
+app.run(host="0.0.0.0", port=8090)
+```
+
+### 与标准 Agent 参数方式的区别
+
+| 特性 | 标准方式（agent 参数） | 自定义查询（@app.query） |
+|------|----------------------|------------------------|
+| 灵活性 | 较低，使用预定义的 Agent | 高，完全自定义处理逻辑 |
+| 状态管理 | 自动处理 | 手动管理，更灵活 |
+| 适用场景 | 简单场景 | 复杂场景，需要精细控制 |
+| 多框架支持 | 有限 | 支持多种框架 |
+
+------
 ## 部署到本地或远程
 
 **功能**
@@ -221,3 +523,5 @@ from agentscope_runtime.engine.deployers import LocalDeployManager
 
 await app.deploy(LocalDeployManager(host="0.0.0.0", port=8091))
 ```
+
+更多部署选项和详细说明，请参考 {doc}`advanced_deployment` 文档。
