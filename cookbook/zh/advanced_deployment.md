@@ -662,4 +662,4 @@ result = await app.deploy(
 
 选择最适合您的用例、基础设施和扩展需求的部署方法。所有方法都使用相同的智能体代码，使得随着需求演变在部署类型之间迁移变得简单。
 
-有关特定组件的更多详细信息，请参阅[服务](context_manager.md)、[沙箱](sandbox.md)和[快速开始](quickstart.md)指南。
+有关特定组件的更多详细信息，请参阅[服务](service)、[沙箱](sandbox.md)和[快速开始](quickstart.md)指南。

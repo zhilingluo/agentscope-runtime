@@ -45,19 +45,26 @@ parts:
   - file: zh/install.md
   - file: zh/concept.md
   - file: zh/quickstart.md
-  - file: zh/sandbox.md
+  - file: zh/tool.md
     sections:
+      - file: zh/dashscope_tools.md
+      - file: zh/sandbox.md
       - file: zh/sandbox_advanced.md
       - file: zh/training_sandbox.md
       - file: zh/sandbox_troubleshooting.md
-  - file: zh/advanced_deployment.md
-  - file: zh/react_agent.md
-  - file: zh/agent_app.md
-  - file: zh/protocol.md
-  - file: zh/context_manager.md
-  - file: zh/environment_manager.md
-  - file: zh/tracing.md
-  - file: zh/demohouse.md
+  - file: zh/deployment.md
+    sections:
+      - file: zh/service.md
+      - file: zh/agent_app.md
+      - file: zh/environment_manager.md
+      - file: zh/advanced_deployment.md
+      - file: zh/react_agent.md
+  - file: zh/use.md
+    sections:
+      - file: zh/webui.md
+      - file: zh/protocol.md
+      - file: zh/tracing.md
+      - file: zh/demohouse.md
   - file: zh/contribute.md
     sections:
     - file: zh/README.md

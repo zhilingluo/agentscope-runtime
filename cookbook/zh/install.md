@@ -30,12 +30,6 @@ kernelspec:
 pip install agentscope-runtime
 ```
 
-如需完整功能，包括沙箱功能：
-
-```bash
-pip install agentscope-runtime
-```
-
 ### 2. （可选）从源码安装
 
 如果您想要使用最新的开发版本或为项目做贡献，可以从源码安装：
@@ -65,17 +59,6 @@ print(f"AgentScope Runtime {agentscope_runtime.__version__} is ready!")
 ```
 
 执行代码后，您应该会看到版本号输出。
-
-### 检查 AgentScope Agent
-
-```{code-cell}
-try:
-    from agentscope_runtime.engine.agents.agentscope_agent import AgentScopeAgent
-    print(f"✅ {AgentScopeAgent.__name__} - 导入成功")
-except ImportError as e:
-    print(f"❌ AgentScopeAgent - 导入失败：{e}")
-    print('💡 尝试通过以下命令安装：pip install "agentscope-runtime[agentscope]"')
-```
 
 
 ## 安装选项说明
