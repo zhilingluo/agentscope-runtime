@@ -12,7 +12,7 @@ kernelspec:
   name: python3
 ---
 
-# 高级部署指南
+# 高级部署
 
 本指南演示了AgentScope Runtime中可用的四种高级部署方法，为不同场景提供生产就绪的解决方案：**本地守护进程**、**独立进程**、**Kubernetes部署**和**ModelStudio部署**。
 

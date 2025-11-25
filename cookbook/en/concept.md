@@ -12,7 +12,13 @@ This chapter introduces the core concepts of AgentScope Runtime, which provides 
 
 The engine module in AgentScope Runtime uses a modular architecture with several key components:
 
-<img src="/_static/agent_architecture.jpg" alt="Agent Architecture" style="zoom:25%;" />
+```{figure} ../_static/agent_architecture.png
+:alt: Agent Architecture
+:width: 75%
+:align: center
+
+Agent Architecture
+```
 
 + **Agent**: The core AI component that processes requests and generates responses (can be LLM-based, workflow-based, or custom implementations, such as Agentscope)
 + **AgentApp**: Inherits from the FastAPI App and serves as the application entry point. It is responsible for providing external API interfaces, registering routes, loading configurations, and delegating incoming requests to the Runner for execution.

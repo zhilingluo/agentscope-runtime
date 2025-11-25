@@ -13,7 +13,7 @@ kernelspec:
 
 ---
 
-# 服务 (Services)
+# 服务
 
 ## 概述
 
@@ -128,7 +128,7 @@ memory_service = InMemoryMemoryService()
 沙箱服务为沙箱管理提供统一接口，支持不同类型的沙箱，如代码执行、文件操作和其他专用沙箱。
 
 ```{code-cell}
-from agentscope_runtime.engine.services.sandbox_service import SandboxService
+from agentscope_runtime.engine.services.sandbox import SandboxService
 
 # 创建并启动沙箱服务
 sandbox_service = SandboxService()
@@ -142,8 +142,83 @@ sandbox_service = SandboxService()
 
 #### 核心功能
 
-- `connect`：连接到特定用户会话的沙箱
-- `release`：在不再需要时释放沙箱
+##### 连接沙盒
+
+`connect`方法允许您连接到特定用户会话的沙盒：
+
+```{code-cell}
+# 连接特定的沙盒类型
+session_id = "session1"
+user_id = "user1"
+sandbox_types = ["browser", "filesystem"]
+
+sandboxes = sandbox_service.connect(
+    session_id=session_id,
+    user_id=user_id,
+    env_types=sandbox_types
+)
+```
+
+##### 使用工具自动配置
+
+服务可以根据所使用的工具自动确定所需的沙盒类型：
+
+```{code-cell}
+# 使用工具连接（自动检测沙盒类型）
+from agentscope_runtime.sandbox.tools.filesystem import read_file
+from agentscope_runtime.sandbox.tools.browser import browser_navigate
+
+tools = [read_file, browser_navigate]
+sandboxes = sandbox_service.connect(session_id=session_id,
+    user_id=user_id,
+    tools=tools
+)
+
+# 服务将自动创建filesystem和browser沙盒
+print(f"配置了 {len(sandboxes)}个沙盒")
+```
+
+##### 沙盒重用
+
+服务高效地为同一用户会话重用现有沙盒：
+
+```{code-cell}
+# 第一次连接创建新沙盒
+sandboxes1 = sandbox_service.connect(session_id, user_id, env_types=["base"])
+
+# 第二次连接重用现有沙盒
+sandboxes2 = sandbox_service.connect(session_id, user_id, env_types=["base"])
+
+# sandboxes1和sandboxes2引用相同的沙盒实例
+assert len(sandboxes1) == len(sandboxes2)
+```
+
+##### 释放沙盒
+
+当不再需要沙盒时释放它们以释放资源：
+
+```{code-cell}
+# 释放特定用户会话的沙盒
+success = sandbox_service.release(session_id, user_id)
+print(f"Release successful: {success}")
+
+# 沙盒将被自动清理
+```
+
+#### 服务生命周期
+
+沙盒服务遵循标准的生命周期模式：
+
+```{code-cell}
+# 启动服务
+await sandbox_service.start()
+
+# 检查服务健康状态
+is_healthy = await sandbox_service.health()
+
+#停止服务（释放所有沙盒）
+await sandbox_service.stop()
+```
 
 详细信息请参见 {doc}`sandbox` 和 {doc}`environment_manager`。
 
@@ -172,7 +247,7 @@ state_service = InMemoryStateService()
 |            记忆类型            | 导入语句                                                                                               |                     说明                     |
 |:--------------------------:|----------------------------------------------------------------------------------------------------|:------------------------------------------:|
 |   InMemoryMemoryService    | `from agentscope_runtime.engine.services.memory import InMemoryMemoryService`              |                                            |
-|     RedisMemoryService     | `from agentscope_runtime.engine.services.redis_memory_service import RedisMemoryService`           |                                            |
+|     RedisMemoryService     | `from agentscope_runtime.engine.services.memory import RedisMemoryService`           |                                            |
 | ReMe.PersonalMemoryService | `from reme_ai.service.personal_memory_service import PersonalMemoryService`                        | [用户指南](https://github.com/modelscope/ReMe) |
 |   ReMe.TaskMemoryService   | `from reme_ai.service.task_memory_service import TaskMemoryService`                                | [用户指南](https://github.com/modelscope/ReMe) |
 | Mem0MemoryService | `from agentscope_runtime.engine.services.memory import Mem0MemoryService`             |                   |
@@ -188,7 +263,7 @@ state_service = InMemoryStateService()
 ```python
 from agentscope_runtime.engine.services.memory import TablestoreMemoryService
 from agentscope_runtime.engine.services.utils.tablestore_service_utils import create_tablestore_client
-from agentscope_runtime.engine.services.tablestore_memory_service import SearchStrategy
+from agentscope_runtime.engine.services.memory.tablestore_memory_service import SearchStrategy
 
 # 创建表格存储记忆服务，默认使用全文检索
 tablestore_memory_service = TablestoreMemoryService(
@@ -249,9 +324,13 @@ print(f"Message count: {len(session_obj.messages)}")
 
 ```{code-cell}
 import asyncio
-
+from agentscope_runtime.engine.services.session_history import InMemorySessionHistoryService
 
 async def main():
+    # 创建并启动会话历史服务
+    session_history_service = InMemorySessionHistoryService()
+    await session_history_service.start()
+    
     # 创建带自动生成ID的会话
     user_id = "test_user"
     session = await session_history_service.create_session(user_id)
@@ -265,7 +344,8 @@ async def main():
         session_id="my_custom_session_id",
     )
     print(f"Custom session ID: {custom_session.id}")
-
+    
+    await session_history_service.stop()
 
 await main()
 ```
@@ -276,14 +356,18 @@ await main()
 
 ```{code-cell}
 import asyncio
-
+from agentscope_runtime.engine.services.session_history import InMemorySessionHistoryService
 
 async def main():
+    session_history_service = InMemorySessionHistoryService()
+    await session_history_service.start()
+    
     user_id = "u1"
     # 检索现有会话（在内存实现中如果不存在会自动创建）
     retrieved_session = await session_history_service.get_session(user_id, "s1")
     assert retrieved_session is not None
-
+    
+    await session_history_service.stop()
 
 await main()
 ```
@@ -294,9 +378,12 @@ await main()
 
 ```{code-cell}
 import asyncio
-
+from agentscope_runtime.engine.services.session_history import InMemorySessionHistoryService
 
 async def main():
+    session_history_service = InMemorySessionHistoryService()
+    await session_history_service.start()
+    
     user_id = "u_list"
     # 创建多个会话
     session1 = await session_history_service.create_session(user_id)
@@ -309,7 +396,8 @@ async def main():
     # 返回的会话不包含消息历史
     for s in listed_sessions:
         assert s.messages == [], "History should be empty in list view"
-
+    
+    await session_history_service.stop()
 
 await main()
 ```
@@ -322,10 +410,13 @@ await main()
 
 ```{code-cell}
 import asyncio
+from agentscope_runtime.engine.services.session_history import InMemorySessionHistoryService
 from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent
 
-
 async def main():
+    session_history_service = InMemorySessionHistoryService()
+    await session_history_service.start()
+    
     user_id = "u_append"
     # 创建会话并添加消息（也接受字典格式）
     session = await session_history_service.create_session(user_id)
@@ -346,7 +437,8 @@ async def main():
 
     # Verify all messages were added
     assert len(session.messages) == 3
-
+    
+    await session_history_service.stop()
 
 await main()
 ```
@@ -356,21 +448,33 @@ await main()
 `delete_session`方法删除特定会话：
 
 ```{code-cell}
-# 创建然后删除会话
-session_to_delete = await session_history_service.create_session(user_id)
-session_id = session_to_delete.id
+import asyncio
+from agentscope_runtime.engine.services.session_history import InMemorySessionHistoryService
 
-# 验证会话存在
-assert await session_history_service.get_session(user_id, session_id) is not None
+async def main():
+    session_history_service = InMemorySessionHistoryService()
+    await session_history_service.start()
+    
+    user_id = "test_user"
+    # 创建然后删除会话
+    session_to_delete = await session_history_service.create_session(user_id)
+    session_id = session_to_delete.id
 
-# 删除会话
-await session_history_service.delete_session(user_id, session_id)
+    # 验证会话存在
+    assert await session_history_service.get_session(user_id, session_id) is not None
 
-# 验证会话已删除
-assert await session_history_service.get_session(user_id, session_id) is None
+    # 删除会话
+    await session_history_service.delete_session(user_id, session_id)
 
-# 删除不存在的会话不会引发错误
-await session_history_service.delete_session(user_id, "non_existent_id")
+    # 验证会话已删除
+    assert await session_history_service.get_session(user_id, session_id) is None
+
+    # 删除不存在的会话不会引发错误
+    await session_history_service.delete_session(user_id, "non_existent_id")
+    
+    await session_history_service.stop()
+
+await main()
 ```
 
 ### 服务生命周期
@@ -433,15 +537,24 @@ import asyncio
 from agentscope_runtime.engine.services.memory import InMemoryMemoryService
 from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent
 
-# 不带会话ID添加记忆
-user_id = "user1"
-messages = [
+async def main():
+    # 创建并启动记忆服务
+    memory_service = InMemoryMemoryService()
+    await memory_service.start()
+    
+    # 不带会话ID添加记忆
+    user_id = "user1"
+    messages = [
         Message(
             role="user",
             content=[TextContent(type="text", text="hello world")]
         )
     ]
-await memory_service.add_memory(user_id, messages)
+    await memory_service.add_memory(user_id, messages)
+    
+    await memory_service.stop()
+
+await main()
 ```
 
 #### 搜索记忆
@@ -453,13 +566,36 @@ await memory_service.add_memory(user_id, messages)
 用户可以使用消息作为查询来搜索相关内容。
 
 ```{code-cell}
-search_query = [
-    Message(
-        role="user",
-        content=[TextContent(type="text", text="hello")]
-    )
-]
-retrieved = await memory_service.search_memory(user_id, search_query)
+import asyncio
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
+from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent
+
+async def main():
+    memory_service = InMemoryMemoryService()
+    await memory_service.start()
+    
+    user_id = "user1"
+    # 先添加一些记忆
+    messages = [
+        Message(
+            role="user",
+            content=[TextContent(type="text", text="hello world")]
+        )
+    ]
+    await memory_service.add_memory(user_id, messages)
+    
+    # 搜索记忆
+    search_query = [
+        Message(
+            role="user",
+            content=[TextContent(type="text", text="hello")]
+        )
+    ]
+    retrieved = await memory_service.search_memory(user_id, search_query)
+    
+    await memory_service.stop()
+
+await main()
 ```
 
 #### 列出记忆
@@ -467,11 +603,33 @@ retrieved = await memory_service.search_memory(user_id, search_query)
 `list_memory`方法提供了一个分页接口来列出记忆，如下所示：
 
 ```{code-cell}
-# List memory with pagination
-memory_list = await memory_service.list_memory(
-    user_id,
-    filters={"page_size": 10, "page_num": 1}
-)
+import asyncio
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
+from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent
+
+async def main():
+    memory_service = InMemoryMemoryService()
+    await memory_service.start()
+    
+    user_id = "user1"
+    # 先添加一些记忆
+    messages = [
+        Message(
+            role="user",
+            content=[TextContent(type="text", text="hello world")]
+        )
+    ]
+    await memory_service.add_memory(user_id, messages)
+    
+    # List memory with pagination
+    memory_list = await memory_service.list_memory(
+        user_id,
+        filters={"page_size": 10, "page_num": 1}
+    )
+    
+    await memory_service.stop()
+
+await main()
 ```
 
 #### 删除记忆
@@ -479,11 +637,35 @@ memory_list = await memory_service.list_memory(
 用户可以删除特定会话或整个用户的记忆：
 
 ```{code-cell}
-# 删除特定会话的记忆
-await memory_service.delete_memory(user_id, session_id)
+import asyncio
+from agentscope_runtime.engine.services.memory import InMemoryMemoryService
+from agentscope_runtime.engine.schemas.agent_schemas import Message, TextContent
 
-# 删除用户的所有记忆
-await memory_service.delete_memory(user_id)
+async def main():
+    memory_service = InMemoryMemoryService()
+    await memory_service.start()
+    
+    user_id = "user1"
+    session_id = "session1"
+    
+    # 先添加一些记忆
+    messages = [
+        Message(
+            role="user",
+            content=[TextContent(type="text", text="hello world")]
+        )
+    ]
+    await memory_service.add_memory(user_id, messages, session_id=session_id)
+    
+    # 删除特定会话的记忆
+    await memory_service.delete_memory(user_id, session_id)
+
+    # 删除用户的所有记忆
+    await memory_service.delete_memory(user_id)
+    
+    await memory_service.stop()
+
+await main()
 ```
 
 ### 服务生命周期

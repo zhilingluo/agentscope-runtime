@@ -101,6 +101,56 @@ print(json.dumps(result, indent=4, ensure_ascii=False))
 
 ## 工具使用
 
+### 使用 SandboxService 管理沙箱
+
+`SandboxService` 提供了统一的沙箱管理接口，支持通过 `session_id` 和 `user_id` 来管理不同用户会话的沙箱环境。使用 `SandboxService` 可以让您更好地控制沙箱的生命周期，并实现沙箱的复用。
+
+```{code-cell}
+import asyncio
+from agentscope_runtime.engine.services.sandbox import SandboxService
+
+async def main():
+    # 创建并启动沙箱服务
+    sandbox_service = SandboxService()
+    await sandbox_service.start()
+
+    session_id = "session_123"
+    user_id = "user_12345"
+
+    # 连接到沙箱，指定需要的沙箱类型
+    sandboxes = sandbox_service.connect(
+        session_id=session_id,
+        user_id=user_id,
+        sandbox_types=["base"],
+    )
+
+    base_sandbox = sandboxes[0]
+
+    # 直接在沙箱实例上调用工具方法
+    result = base_sandbox.run_ipython_cell("print('Hello, World!')")
+    base_sandbox.run_ipython_cell("a=1")
+
+    print(result)
+
+    # 使用相同的 session_id 和 user_id 会复用同一个沙箱实例
+    new_sandboxes = sandbox_service.connect(
+        session_id=session_id,
+        user_id=user_id,
+        sandbox_types=["base"],
+    )
+
+    new_base_sandbox = new_sandboxes[0]
+    # 变量 a 仍然存在，因为复用了同一个沙箱
+    result = new_base_sandbox.run_ipython_cell("print(a)")
+    print(result)
+
+    # 停止沙箱服务
+    await sandbox_service.stop()
+
+# 运行异步函数
+asyncio.run(main())
+```
+
 ### 调用工具
 
 最基本的用法是直接调用内置工具（如通过Sandbox运行Python代码或shell命令）：
@@ -122,10 +172,59 @@ print(run_shell_command(command="whoami"))
 
 ### 将沙箱绑定到工具
 
-除了直接调用工具外，您还可以使用bind方法将特定沙箱绑定到工具。这允许您指定函数将在哪个沙箱中运行，让您更好地控制执行环境。需要注意的是，函数的类型和沙箱类型必须匹配，否则函数将无法正确执行。以下是操作方法：
+除了直接调用工具外，您还可以使用bind方法将特定沙箱绑定到工具。这允许您指定函数将在哪个沙箱中运行，让您更好地控制执行环境。需要注意的是，函数的类型和沙箱类型必须匹配，否则函数将无法正确执行。
+
+#### 使用 SandboxService 获取沙箱并绑定工具
+
+```{code-cell}
+import asyncio
+from agentscope_runtime.engine.services.sandbox import SandboxService
+from agentscope_runtime.sandbox.tools.base import (
+    run_ipython_cell,
+    run_shell_command,
+)
+
+async def main():
+    sandbox_service = SandboxService()
+    await sandbox_service.start()
+
+    session_id = "session_456"
+    user_id = "user_67890"
+
+    # 通过 SandboxService 获取沙箱实例
+    sandboxes = sandbox_service.connect(
+        session_id=session_id,
+        user_id=user_id,
+        sandbox_types=["base"],
+    )
+
+    sandbox = sandboxes[0]
+
+    # 确保函数的沙箱类型与沙箱实例类型匹配
+    assert run_ipython_cell.sandbox_type == sandbox.sandbox_type
+
+    # 将沙箱绑定到工具函数
+    func1 = run_ipython_cell.bind(sandbox=sandbox)
+    func2 = run_shell_command.bind(sandbox=sandbox)
+
+    # 在沙箱内执行函数
+    print(func1(code="repo = 'agentscope-runtime'"))
+    print(func1(code="print(repo)"))
+    print(func2(command="whoami"))
+
+    await sandbox_service.stop()
+
+asyncio.run(main())
+```
+
+#### 使用上下文管理器创建沙箱并绑定工具
 
 ```{code-cell}
 from agentscope_runtime.sandbox import BaseSandbox
+from agentscope_runtime.sandbox.tools.base import (
+    run_ipython_cell,
+    run_shell_command,
+)
 
 with BaseSandbox() as sandbox:
     # 确保函数的沙箱类型与沙箱实例类型匹配
@@ -180,8 +279,35 @@ print(mcp_tools)
 mcp_tools = MCPConfigConverter(server_configs=config).to_builtin_tools(
     sandbox_type="base",
 )
+```
 
-# 使用已有的沙箱实例注册工具
+```{code-cell}
+import asyncio
+from agentscope_runtime.engine.services.sandbox import SandboxService
+
+async def main():
+    # 使用 SandboxService 获取沙箱实例并注册工具
+    sandbox_service = SandboxService()
+    await sandbox_service.start()
+
+    sandboxes = sandbox_service.connect(
+        session_id="session_mcp",
+        user_id="user_mcp",
+        sandbox_types=["base"],
+    )
+
+    sandbox = sandboxes[0]
+    mcp_tools = MCPConfigConverter(server_configs=config).to_builtin_tools(
+        sandbox=sandbox,
+    )
+
+    await sandbox_service.stop()
+
+asyncio.run(main())
+```
+
+```{code-cell}
+# 使用上下文管理器创建沙箱并注册工具
 with BaseSandbox() as sandbox:
     mcp_tools = MCPConfigConverter(server_configs=config).to_builtin_tools(
         sandbox=sandbox,
@@ -284,7 +410,46 @@ bound_tool = original_tool.bind(sandbox=my_sandbox)
 
 前面的部分介绍了以工具为中心的使用方法，而本节介绍以沙箱为中心的使用方法。
 
-您可以通过`sandbox` SDK创建不同类型的沙箱：
+您可以通过`sandbox` SDK创建不同类型的沙箱。有两种主要方式：
+
+1. **使用 SandboxService（推荐）**：通过 `SandboxService` 管理沙箱生命周期，支持会话管理和沙箱复用。
+2. **使用上下文管理器**：直接使用沙箱类的上下文管理器，适合简单的单次使用场景。
+
+#### 使用 SandboxService 创建沙箱
+
+```{code-cell}
+import asyncio
+from agentscope_runtime.engine.services.sandbox import SandboxService
+
+async def main():
+    # 创建并启动沙箱服务
+    sandbox_service = SandboxService()
+    await sandbox_service.start()
+
+    session_id = "my_session"
+    user_id = "my_user"
+
+    # 连接到基础沙箱
+    sandboxes = sandbox_service.connect(
+        session_id=session_id,
+        user_id=user_id,
+        sandbox_types=["base"],
+    )
+
+    base_sandbox = sandboxes[0]
+    print(base_sandbox.list_tools())  # 列出所有可用工具
+    print(base_sandbox.run_ipython_cell(code="print('hi')"))
+    print(base_sandbox.run_shell_command(command="echo hello"))
+
+    # 停止沙箱服务
+    await sandbox_service.stop()
+
+asyncio.run(main())
+```
+
+#### 使用上下文管理器创建沙箱
+
+您也可以通过上下文管理器直接创建不同类型的沙箱：
 
 * **基础沙箱（Base Sandbox）**：用于在隔离环境中运行 **Python 代码** 或 **Shell 命令**。
 
@@ -394,7 +559,63 @@ with AgentbaySandbox(
 
 MCP（模型上下文协议）是一个标准化协议，使AI应用程序能够安全地连接到外部数据源和工具。通过将MCP服务器集成到您的沙箱中，您可以在不影响安全性的情况下使用专门的工具和服务扩展沙箱的功能。
 
-沙箱支持通过`add_mcp_servers`方法集成MCP服务器。添加后，您可以使用`list_tools`发现可用工具并使用`call_tool`执行它们。以下是添加提供时区感知的MCP的示例：
+沙箱支持通过`add_mcp_servers`方法集成MCP服务器。添加后，您可以使用`list_tools`发现可用工具并使用`call_tool`执行它们。
+
+#### 使用 SandboxService 添加MCP服务器
+
+```{code-cell}
+import asyncio
+from agentscope_runtime.engine.services.sandbox import SandboxService
+
+async def main():
+    sandbox_service = SandboxService()
+    await sandbox_service.start()
+
+    session_id = "session_mcp"
+    user_id = "user_mcp"
+
+    sandboxes = sandbox_service.connect(
+        session_id=session_id,
+        user_id=user_id,
+        sandbox_types=["base"],
+    )
+
+    sandbox = sandboxes[0]
+
+    mcp_server_configs = {
+        "mcpServers": {
+            "time": {
+                "command": "uvx",
+                "args": [
+                    "mcp-server-time",
+                    "--local-timezone=America/New_York",
+                ],
+            },
+        },
+    }
+
+    # 将MCP服务器添加到沙箱
+    sandbox.add_mcp_servers(server_configs=mcp_server_configs)
+
+    # 列出所有可用工具（现在包括MCP工具）
+    print(sandbox.list_tools())
+
+    # 使用MCP服务器提供的时间工具
+    print(
+        sandbox.call_tool(
+            "get_current_time",
+            arguments={
+                "timezone": "America/New_York",
+            },
+        ),
+    )
+
+    await sandbox_service.stop()
+
+asyncio.run(main())
+```
+
+#### 使用上下文管理器添加MCP服务器
 
 ```{code-cell}
 with BaseSandbox() as sandbox:
@@ -445,7 +666,41 @@ with BaseSandbox() as sandbox:
 runtime-sandbox-server
 ```
 
-要连接到远程沙箱服务，只需传入`base_url`：
+要连接到远程沙箱服务，可以通过以下两种方式：
+
+#### 使用 SandboxService 连接远程沙箱
+
+```{code-cell}
+import asyncio
+from agentscope_runtime.engine.services.sandbox import SandboxService
+
+async def main():
+    # 创建 SandboxService 并指定远程服务器地址
+    sandbox_service = SandboxService(
+        base_url="http://your_IP_address:8000",  # 替换为实际的服务器IP
+        bearer_token="your_token"  # 可选：如果需要身份验证
+    )
+    await sandbox_service.start()
+
+    session_id = "remote_session"
+    user_id = "remote_user"
+
+    # 连接到远程沙箱
+    sandboxes = sandbox_service.connect(
+        session_id=session_id,
+        user_id=user_id,
+        sandbox_types=["base"],
+    )
+
+    base_sandbox = sandboxes[0]
+    print(base_sandbox.run_ipython_cell(code="print('hi')"))
+
+    await sandbox_service.stop()
+
+asyncio.run(main())
+```
+
+#### 使用上下文管理器连接远程沙箱
 
 ```python
 # 连接到远程沙箱服务器（替换为实际的服务器IP）

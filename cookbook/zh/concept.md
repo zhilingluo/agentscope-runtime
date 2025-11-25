@@ -11,7 +11,13 @@
 
 AgentScope Runtime使用模块化架构，包含几个关键组件：
 
-<img src="/_static/agent_architecture_zh.png" alt="智能体架构" style="zoom:25%;" />
+```{figure} ../_static/agent_architecture_zh.png
+:alt: 智能体架构
+:width: 75%
+:align: center
+
+智能体架构
+```
 
 - **Agent**：处理请求并生成响应的核心AI组件，在Runtime中，Agent的构建推荐使用AgentScope框架。
 - **AgentApp**: 继承于 FastAPI App，作为应用入口，负责对外提供 API 接口、路由注册、配置加载，并将请求交由 Runner 调用执行

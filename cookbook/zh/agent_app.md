@@ -12,7 +12,7 @@ kernelspec:
   name: python3
 ---
 
-# 深入了解AgentApp
+# 简单部署
 
 `AgentApp` 是 **AgentScope Runtime** 中的完整 Agent 服务封装器。
 它可以将任何符合接口的 Agent 变成一个 API 服务，支持：

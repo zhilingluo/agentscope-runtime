@@ -56,15 +56,16 @@ parts:
     sections:
       - file: zh/service.md
       - file: zh/agent_app.md
-      - file: zh/environment_manager.md
       - file: zh/advanced_deployment.md
       - file: zh/react_agent.md
   - file: zh/use.md
     sections:
+      - file: zh/call.md
       - file: zh/webui.md
-      - file: zh/protocol.md
       - file: zh/tracing.md
+      - file: zh/protocol.md
       - file: zh/demohouse.md
+      - file: zh/ut.md
   - file: zh/contribute.md
     sections:
     - file: zh/README.md
