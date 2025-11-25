@@ -14,13 +14,13 @@ kernelspec:
 
 # Quick Start
 
-This guide demonstrates how to build a simple agent application in the **AgentScope Runtime** framework and deploy it as a service.
+This tutorial walks through building a simple agent application in **AgentScope Runtime** and deploying it as a service.
 
 ## Prerequisites
 
 ### 🔧 Installation Requirements
 
-Install AgentScope Runtime with basic dependencies:
+Install AgentScope Runtime with the base dependencies:
 
 ```bash
 pip install agentscope-runtime
@@ -28,7 +28,7 @@ pip install agentscope-runtime
 
 ### 🔑 API Key Configuration
 
-You'll need an API key for your chosen LLM provider. This example uses DashScope (Qwen):
+Provide an API key for your selected LLM provider. This example uses DashScope's Qwen model, so we set the DashScope API key as an environment variable:
 
 ```bash
 export DASHSCOPE_API_KEY="your_api_key_here"
@@ -38,7 +38,7 @@ export DASHSCOPE_API_KEY="your_api_key_here"
 
 ### Step 1: Import Dependencies
 
-Start by importing all necessary modules:
+Start by importing every required module:
 
 ```{code-cell}
 import os
@@ -54,6 +54,7 @@ from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
 from agentscope_runtime.adapters.agentscope.memory import (
     AgentScopeSessionHistoryMemory,
 )
+from agentscope_runtime.engine.deployers import LocalDeployManager
 from agentscope_runtime.engine.services.agent_state import (
     InMemoryStateService,
 )
@@ -64,9 +65,9 @@ from agentscope_runtime.engine.services.session_history import (
 print("✅ Dependencies imported successfully")
 ```
 
-### Step 2: Create an Agent App
+### Step 2: Create the Agent App
 
-`AgentApp` is the core of an agent application's lifecycle and request handling. All initialization, query processing, and resource cleanup will be registered on it.
+`AgentApp` is the lifecycle and request hub of the agent application. All initialization, query handling, and shutdown routines are registered on it:
 
 ```{code-cell}
 agent_app = AgentApp(
@@ -77,9 +78,9 @@ agent_app = AgentApp(
 print("✅ Agent App created successfully")
 ```
 
-### Step 3: Register Lifecycle Methods (Initialization & Shutdown)
+### Step 3: Register Lifecycle Hooks (Init & Shutdown)
 
-Here we define what the app does at startup (initialize state management, session history services) and how it releases resources when shutting down.
+Define what happens when the service starts (state/session services) and how resources are released during shutdown:
 
 ```{code-cell}
 @agent_app.init
@@ -96,13 +97,14 @@ async def shutdown_func(self):
     await self.session_service.stop()
 ```
 
-### Step 4: Define AgentScope Agent Query Logic
+### Step 4: Define the AgentScope Query Logic
 
-- This section defines the business logic when the Agent API is called:
-  - **Get session information**: Ensure context is isolated between different users/sessions.
-  - **Build the agent**: Includes model, tools (e.g. execute Python code), memory, formatter.
-  - **Support streaming output**: Must use `stream_printing_messages` to return `(msg, last)` to support generation while responding to the client.
-  - **Persist state**: Save the agent’s current state.
+When the agent endpoint is invoked, we:
+
+- **Load session context** to keep different sessions isolated.
+- **Construct the agent** with model, tools (e.g., Python execution), memory, and formatter.
+- **Stream responses** via `stream_printing_messages`, yielding `(msg, last)` so clients receive output as it is generated.
+- **Persist state** so the next request can resume.
 
 ```{code-cell}
 @agent_app.query(framework="agentscope")
@@ -159,18 +161,17 @@ async def query_func(
     )
 ```
 
-### Step 5: Start the Agent App
+### Step 5: Run the Agent App
 
-Start the Agent API server. Once running, the server will be listening at:
-`http://localhost:8090/process`
+Start the Agent API server. After launch it listens on `http://localhost:8090/process`:
 
 ```{code-cell}
-app.run(host="0.0.0.0", port=8090)
+agent_app.run(host="0.0.0.0", port=8090)
 ```
 
-### Step 6: Send Request to Agent
+### Step 6: Send a Request
 
-You can use `curl` to send a JSON payload to the API:
+Use `curl` to post JSON input and observe SSE output:
 
 ```bash
 curl -N \
@@ -188,7 +189,7 @@ curl -N \
   }'
 ```
 
-You’ll see output streamed in **Server-Sent Events (SSE)** format:
+The response is streamed as **Server-Sent Events (SSE)**:
 
 ```bash
 data: {"sequence_number":0,"object":"response","status":"created", ... }
@@ -198,19 +199,18 @@ data: {"sequence_number":3,"object":"content","status":"in_progress","text":" ca
 data: {"sequence_number":4,"object":"message","status":"completed","text":"The capital of France is Paris." }
 ```
 
-### Step 7: Deploy the Agent App Using DeployManager
+### Step 7: Deploy with `DeployManager`
 
-The AgentScope Runtime provides a powerful deployment system that allows you to deploy your agent to remote or local container. And we use `LocalDeployManager` as example:
+AgentScope Runtime ships with a powerful deployment system. The snippet below uses `LocalDeployManager`:
 
 ```{code-cell}
 async def main():
-    await app.deploy(LocalDeployManager(host="0.0.0.0", port=8091))
+    await agent_app.deploy(LocalDeployManager(host="0.0.0.0", port=8091))
 ```
 
+This spins up the agent server on the specified port so external clients can call it. Beyond the basic HTTP API, you can also interact with the deployment through protocols like A2A, Response API, and Agent API—see {doc}`protocol` for details.
 
-This will run your agent API Server on the specified port, making it accessible for external requests. In addition to basic HTTP API access, you can interact with the agent through different protocols, such as A2A, Response API, Agent API, and others. Please refer {doc}`protocol` for details.
-
-For example, user could query the deployment by OpenAI SDK with response api.
+Clients can even call the service through the OpenAI SDK:
 
 ```python
 from openai import OpenAI
@@ -219,8 +219,17 @@ client = OpenAI(base_url="http://0.0.0.0:8091/compatible-mode/v1")
 
 response = client.responses.create(
   model="any_name",
-  input="What is the weather in Beijing?"
+  input="杭州天气如何？"
 )
 
 print(response)
 ```
+
+## Further Reading
+
+The following chapters dive deeper into related topics:
+
+- {doc}`tool`: add tools to your agent
+- {doc}`deployment`: package and ship your agent as a service
+- {doc}`use`: interact with deployed services
+- {doc}`contribute`: contribution guide for this project

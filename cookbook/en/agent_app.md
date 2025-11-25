@@ -10,30 +10,29 @@ kernelspec:
   display_name: Python 3
   language: python
   name: python3
-
 ---
 
-# Deep Dive into AgentApp
+# Simple Deployment
 
-`AgentApp` is a complete agent service wrapper in **AgentScope Runtime**.
-It can turn any agent that follows the interface into an API service, supporting:
+`AgentApp` is the all-in-one agent service wrapper in **AgentScope Runtime**. Any agent that matches its interface can be exposed as an API service supporting:
 
-- Streaming output (SSE)
-- Health check endpoints
+- Streaming responses (SSE)
+- Health-check endpoints
 - Lifecycle hooks (`before_start` / `after_finish`)
 - Celery asynchronous task queues
-- Deployment to local or remote environments
+- Deployments to local or remote targets
 
-Below is a detailed explanation of each feature with usage examples.
+The sections below dive into each capability with concrete examples.
 
 ------
 
 ## Initialization and Basic Run
 
-**Function**
-Launch an HTTP API service containing the Agent, listening on the specified port, and providing the main processing endpoint (default `/process`).
+**What it does**
 
-**Example Usage**
+Starts an HTTP API service that wraps your agent, listens on the configured port, and serves the primary handler (default `/process`).
+
+**Example**
 
 ```{code-cell}
 from agentscope_runtime.engine import AgentApp
@@ -41,7 +40,7 @@ from agentscope_runtime.engine.agents.agentscope_agent import AgentScopeAgent
 from agentscope.model import OpenAIChatModel
 from agentscope.agent import ReActAgent
 
-# Create Agent
+# Build an Agent
 agent = AgentScopeAgent(
     name="Friday",
     model=OpenAIChatModel(
@@ -52,7 +51,7 @@ agent = AgentScopeAgent(
     agent_builder=ReActAgent,
 )
 
-# Create and run AgentApp
+# Create and launch AgentApp
 app = AgentApp(agent=agent, endpoint_path="/process", response_type="sse", stream=True)
 app.run(host="0.0.0.0", port=8090)
 ```
@@ -61,13 +60,14 @@ app.run(host="0.0.0.0", port=8090)
 
 ## Streaming Output (SSE)
 
-- **Function**
-  Allows the client to receive generated results in real-time (suitable for chat, code generation, and other step-by-step output scenarios).
+**Purpose**
 
-  **Key Parameters**
+Stream partial outputs to clients in real time—perfect for chat, coding, or any incremental generation scenario.
 
-  - `response_type="sse"`
-  - `stream=True`
+**Key Parameters**
+
+- `response_type="sse"`
+- `stream=True`
 
 **Client Example**
 
@@ -95,24 +95,23 @@ data: {"sequence_number":4,"object":"message","status":"completed","text":"Hello
 
 ## Lifecycle Hooks
 
-**Function**
-Run custom logic before the application starts and after it stops — for example, loading models or closing connections.
+**Purpose**
 
-### Method 1: Using Parameters
+Execute custom logic before startup and after shutdown—handy for loading models, opening connections, or releasing resources.
+
+### Method 1: Pass Callables as Parameters
 
 **Key Parameters**
 
-- `before_start`: runs before the API service starts
-- `after_finish`: runs when the API service is shutting down
-
-**Example Usage**
+- `before_start`: invoked before the API server starts
+- `after_finish`: invoked when the server stops
 
 ```{code-cell}
 async def init_resources(app, **kwargs):
-    print("🚀 Service starting, initializing resources...")
+    print("🚀 Service launching, initializing resources...")
 
 async def cleanup_resources(app, **kwargs):
-    print("🛑 Service stopping, releasing resources...")
+    print("🛑 Service stopping, cleaning up resources...")
 
 app = AgentApp(
     agent=agent,
@@ -121,11 +120,9 @@ app = AgentApp(
 )
 ```
 
-### Method 2: Using Decorators (Recommended)
+### Method 2: Use Decorators (Recommended)
 
-In addition to using parameters, you can also register lifecycle hooks using decorators, which is more flexible and intuitive:
-
-**Example Usage**
+Decorators are more flexible and keep the logic close to the app definition:
 
 ```{code-cell}
 from agentscope_runtime.engine import AgentApp
@@ -145,38 +142,37 @@ async def init_func(self):
     
     await self.state_service.start()
     await self.session_service.start()
-    print("✅ Service initialization complete")
+    print("✅ Service initialized")
 
 @app.shutdown
 async def shutdown_func(self):
-    """Clean up service resources"""
+    """Release service resources"""
     await self.state_service.stop()
     await self.session_service.stop()
-    print("✅ Service resources cleaned up")
+    print("✅ Resources released")
 ```
 
 **Decorator Notes**
 
-- `@app.init`: Register initialization hook, executed before service starts
-- `@app.shutdown`: Register shutdown hook, executed when service stops
-- Decorator functions receive `self` parameter, allowing access to the `AgentApp` instance
-- Supports both sync and async functions
+- `@app.init`: runs before the service starts
+- `@app.shutdown`: runs as the service stops
+- Decorated functions receive `self`, so they can access the `AgentApp` instance
+- Works with sync or async functions
 
 ------
 
 ## Health Check Endpoints
 
-**Function**
-Automatically provides health probe endpoints for container or cluster deployment.
+**Purpose**
+
+Expose readiness probes automatically for containers or clusters.
 
 **Endpoints**
 
 - `GET /health`: returns status and timestamp
-- `GET /readiness`: checks readiness
-- `GET /liveness`: checks liveness
+- `GET /readiness`: readiness probe
+- `GET /liveness`: liveness probe
 - `GET /`: welcome message
-
-**Example**
 
 ```bash
 curl http://localhost:8090/health
@@ -189,36 +185,35 @@ curl http://localhost:8090/
 
 ## Middleware Extensions
 
-**Function**
-Run additional logic when requests enter or complete (e.g., logging, authentication, rate limiting).
+**Purpose**
 
-**Example**
+Inject logic before or after handling each request—for logging, auth, rate limiting, etc.
 
 ```{code-cell}
 @app.middleware("http")
 async def custom_logger(request, call_next):
-    print(f"Received request: {request.method} {request.url}")
+    print(f"Request: {request.method} {request.url}")
     response = await call_next(request)
     return response
 ```
 
-- Built-in in AgentApp:
-  - Request logging middleware
-  - CORS (Cross-Origin Resource Sharing) support
+AgentApp ships with:
+
+- Request logging middleware
+- Built-in CORS support
 
 ------
 
 ## Celery Asynchronous Task Queue (Optional)
 
-**Function**
-Supports long-running background tasks without blocking the main HTTP thread.
+**Purpose**
+
+Offload long-running background tasks so HTTP handlers return immediately.
 
 **Key Parameters**
 
 - `broker_url="redis://localhost:6379/0"`
 - `backend_url="redis://localhost:6379/0"`
-
-**Example Usage**
 
 ```{code-cell}
 app = AgentApp(
@@ -232,19 +227,19 @@ def heavy_computation(data):
     return {"result": data["x"] ** 2}
 ```
 
-Request:
+Submit a task:
 
 ```bash
 curl -X POST http://localhost:8090/longjob -H "Content-Type: application/json" -d '{"x": 5}'
 ```
 
-Returns Task ID:
+Response:
 
 ```bash
 {"task_id": "abc123"}
 ```
 
-Fetch result:
+Fetch the result:
 
 ```bash
 curl http://localhost:8090/longjob/abc123
@@ -252,10 +247,11 @@ curl http://localhost:8090/longjob/abc123
 
 ------
 
-## Custom Query Processing
+## Custom Query Handling
 
-**Function**
-Use the `@app.query()` decorator to fully customize query processing logic, enabling more flexible control including state management, session history management, etc.
+**Purpose**
+
+Use `@app.query()` to fully control request handling—ideal when you need custom state, multi-turn logic, or different frameworks.
 
 ### Basic Usage
 
@@ -279,7 +275,7 @@ async def query_func(
     request: AgentRequest = None,
     **kwargs,
 ):
-    """Custom query processing function"""
+    """Custom query handler"""
     session_id = request.session_id
     user_id = request.user_id
     
@@ -289,7 +285,7 @@ async def query_func(
         user_id=user_id,
     )
     
-    # Create Agent instance
+    # Build agent
     agent = ReActAgent(
         name="Friday",
         model=DashScopeChatModel(
@@ -305,18 +301,18 @@ async def query_func(
         ),
     )
     
-    # Restore state (if exists)
+    # Restore state if present
     if state:
         agent.load_state_dict(state)
     
-    # Stream process messages
+    # Stream responses
     async for msg, last in stream_printing_messages(
         agents=[agent],
         coroutine_task=agent(msgs),
     ):
         yield msg, last
     
-    # Save state
+    # Persist state
     state = agent.state_dict()
     await self.state_service.save_state(
         user_id=user_id,
@@ -325,87 +321,19 @@ async def query_func(
     )
 ```
 
-### Key Features
+### Key Characteristics
 
-1. **Framework Support**: The `framework` parameter supports `"agentscope"`, `"autogen"`, `"agno"`, `"langgraph"`, etc.
+1. **Framework Flexibility**: `framework` accepts `"agentscope"`, `"autogen"`, `"agno"`, `"langgraph"`, etc.
 2. **Function Signature**:
-   - `self`: AgentApp instance, can access registered services
-   - `msgs`: Input message list
-   - `request`: AgentRequest object, containing `session_id`, `user_id`, etc.
-   - `**kwargs`: Other extension parameters
-3. **Streaming Output**: Functions can be generators, supporting streaming result returns
-4. **State Management**: Can access `self.state_service` for state save and restore
-5. **Session History**: Can access `self.session_service` for session history management
+   - `self`: the AgentApp instance (access services, configs, etc.)
+   - `msgs`: incoming messages
+   - `request`: `AgentRequest` with `session_id`, `user_id`, etc.
+   - `**kwargs`: extend as needed
+3. **Streaming Friendly**: Handlers can be async generators that yield `(msg, last)` pairs.
+4. **Stateful**: Access `self.state_service` to load/store custom state.
+5. **Session Memory**: Use `self.session_service` to keep chat history per user/session.
 
-### State Service (StateService) Details
-
-`StateService` is used to manage agent states, supporting state save, restore, and management. In custom query processing, you can access the state service through `self.state_service`.
-
-**Main Methods**:
-
-- `save_state(user_id, state, session_id=None, round_id=None)`: Save agent state
-- `export_state(user_id, session_id=None, round_id=None)`: Export/load agent state
-- `list_states(user_id, session_id=None)`: List all states
-- `delete_state(user_id, session_id=None, round_id=None)`: Delete state
-
-**Implementations**:
-
-- `InMemoryStateService`: In-memory implementation, suitable for development and testing
-- `RedisStateService`: Redis implementation, suitable for production environments with persistence support
-
-**Usage Example**:
-
-```{code-cell}
-from agentscope_runtime.engine.services.agent_state import (
-    InMemoryStateService,
-    RedisStateService,
-)
-
-# Use in-memory state service (development)
-@app.init
-async def init_func(self):
-    self.state_service = InMemoryStateService()
-    await self.state_service.start()
-
-# Use Redis state service (production)
-@app.init
-async def init_func(self):
-    self.state_service = RedisStateService(
-        host="localhost",
-        port=6379,
-        db=0,
-    )
-    await self.state_service.start()
-
-# Use state service in query processing
-@app.query(framework="agentscope")
-async def query_func(self, msgs, request: AgentRequest = None, **kwargs):
-    session_id = request.session_id
-    user_id = request.user_id
-    
-    # Load historical state
-    state = await self.state_service.export_state(
-        user_id=user_id,
-        session_id=session_id,
-    )
-    
-    # Create Agent and restore state
-    agent = ReActAgent(...)
-    if state:
-        agent.load_state_dict(state)
-    
-    # Process messages...
-    
-    # Save state
-    new_state = agent.state_dict()
-    await self.state_service.save_state(
-        user_id=user_id,
-        session_id=session_id,
-        state=new_state,
-    )
-```
-
-### Complete Example: AgentApp with State Management
+### Full Example with State Management
 
 ```{code-cell}
 import os
@@ -426,7 +354,7 @@ app = AgentApp(
 
 @app.init
 async def init_func(self):
-    """Initialize state and session services"""
+    """Start state and session services"""
     self.state_service = InMemoryStateService()
     self.session_service = InMemorySessionHistoryService()
     await self.state_service.start()
@@ -434,7 +362,7 @@ async def init_func(self):
 
 @app.shutdown
 async def shutdown_func(self):
-    """Clean up services"""
+    """Tear down services"""
     await self.state_service.stop()
     await self.session_service.stop()
 
@@ -445,7 +373,7 @@ async def query_func(
     request: AgentRequest = None,
     **kwargs,
 ):
-    """Query processing with state management"""
+    """Query handler with state persistence"""
     session_id = request.session_id
     user_id = request.user_id
     
@@ -455,11 +383,11 @@ async def query_func(
         user_id=user_id,
     )
     
-    # Create toolkit
+    # Register tools
     toolkit = Toolkit()
     toolkit.register_tool_function(execute_python_code)
     
-    # Create Agent
+    # Build agent
     agent = ReActAgent(
         name="Friday",
         model=DashScopeChatModel(
@@ -478,11 +406,11 @@ async def query_func(
     )
     agent.set_console_output_enabled(enabled=False)
     
-    # Restore state
+    # Restore state if any
     if state:
         agent.load_state_dict(state)
     
-    # Stream process
+    # Stream output
     async for msg, last in stream_printing_messages(
         agents=[agent],
         coroutine_task=agent(msgs),
@@ -497,26 +425,24 @@ async def query_func(
         state=state,
     )
 
-# Run service
+# Launch service
 app.run(host="0.0.0.0", port=8090)
 ```
 
-### Comparison with Standard Agent Parameter Method
+### Comparison with the `agent` Parameter Approach
 
-| Feature | Standard Method (agent parameter) | Custom Query (@app.query) |
-|---------|-----------------------------------|---------------------------|
-| Flexibility | Lower, uses predefined Agent | High, fully customizable processing logic |
-| State Management | Automatic handling | Manual management, more flexible |
-| Use Cases | Simple scenarios | Complex scenarios requiring fine-grained control |
-| Multi-framework Support | Limited | Supports multiple frameworks |
+| Feature | Pre-built `agent` Parameter | Custom `@app.query` |
+|---------|----------------------------|---------------------|
+| Flexibility | Lower—uses a provided agent implementation | Full control over every step |
+| State Management | Automatic | Manual but far more customizable |
+| Suitable Scenarios | Simple, quick setups | Complex workflows needing fine-grained control |
+| Multi-framework Support | Limited | Plug in any supported framework |
 
 ------
-## Local or Remote Deployment
 
-**Function**
-Deploy to different runtime environments via the unified `deploy()` method.
+## Deploy Locally or Remotely
 
-**Example Usage**
+Use the unified `deploy()` method to ship the same app to different environments:
 
 ```{code-cell}
 from agentscope_runtime.engine.deployers import LocalDeployManager
@@ -524,4 +450,4 @@ from agentscope_runtime.engine.deployers import LocalDeployManager
 await app.deploy(LocalDeployManager(host="0.0.0.0", port=8091))
 ```
 
-For more deployment options and detailed instructions, please refer to the {doc}`advanced_deployment` documentation.
+See {doc}`advanced_deployment` for additional deployers (Kubernetes, ModelStudio, AgentRun, etc.) and more configuration tips.

@@ -14,18 +14,19 @@ kernelspec:
 
 # Advanced Deployment Guide
 
-This guide demonstrates the four advanced deployment methods available in AgentScope Runtime, providing production-ready solutions for different scenarios: **Local Daemon**, **Detached Process**, **Kubernetes Deployment**, and **ModelStudio Deployment**.
+This guide covers the five advanced deployment methods available in AgentScope Runtime, providing production-ready solutions for different scenarios: **Local Daemon**, **Detached Process**, **Kubernetes Deployment**, **ModelStudio Deployment**, and **AgentRun Deployment**.
 
 ## Overview of Deployment Methods
 
-AgentScope Runtime offers four distinct deployment approaches, each tailored for specific use cases:
+AgentScope Runtime offers five distinct deployment approaches, each tailored for specific use cases:
 
 | Deployment Type | Use Case | Scalability | Management | Resource Isolation |
 |----------------|----------|-------------|------------|-------------------|
 | **Local Daemon** | Development & Testing | Single Process | Manual | Process-level |
 | **Detached Process** | Production Services | Single Node | Automated | Process-level |
-| **Kubernetes** | Enterprise & Cloud | Single-node(Will support Multi-node) | Orchestrated | Container-level |
+| **Kubernetes** | Enterprise & Cloud | Single-node (multi-node support coming) | Orchestrated | Container-level |
 | **ModelStudio** | Alibaba Cloud Platform | Cloud-managed | Platform-managed | Container-level |
+| **AgentRun** | AgentRun Platform | Cloud-managed | Platform-managed | Container-level |
 
 ### Deployment Modes (DeploymentMode)
 
@@ -636,36 +637,3 @@ result = await app.deploy(
 )
 ```
 
-## Summary
-
-This guide covers five deployment methods in AgentScope Runtime:
-
-### 🏃 **Local Daemon**: Development & Testing
-- Quick setup and direct control
-- Best for development and small-scale usage
-- Manual lifecycle management
-
-### 🔧 **Detached Process**: Production Services
-- Process isolation and automated management
-- Suitable for production single-node deployments
-- Remote control capabilities
-
-### ☸️ **Kubernetes**: Enterprise & Cloud
-- Full container orchestration and scaling
-- High availability and cloud-native features
-- Enterprise-grade production deployments
-
-### ☁️ **ModelStudio**: Alibaba Cloud Platform
-- Fully managed cloud deployment
-- Built-in monitoring and auto-scaling
-- Seamless integration with Alibaba Cloud services
-
-### 🚀 **AgentRun**: Alibaba Cloud AgentRun Service
-- Automated build and deployment workflows
-- OSS integration for artifact storage
-- Complete runtime lifecycle management
-- Automatic public access endpoint creation
-
-Choose the deployment method that best fits your use case, infrastructure, and scaling requirements. All methods use the same agent code, making migration between deployment types straightforward as your needs evolve.
-
-For more detailed information on specific components, refer to the [Services](context_manager.md), [Sandbox](sandbox.md), and [Quick Start](quickstart.md) guides.
