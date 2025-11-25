@@ -40,8 +40,3 @@ Secure, isolated environments that let agents execute tools, control browsers, m
 * **📊 Observability**: End-to-end tracing and monitoring for runtime behavior
 
 Start deploying agents and experimenting with the sandbox today!
-
-## Getting Started
-
-```{tableofcontents}
-```

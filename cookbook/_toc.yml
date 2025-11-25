@@ -1,11 +1,9 @@
 format: jb-book
 root: en/intro
 parts:
-- caption: Introduction
-  chapters:
-    - file: en/intro.md
-      title: "0. Introduction"
-      
+
+
+
 - caption: Tutorial
   numbered: 1
   chapters:
@@ -39,8 +37,8 @@ parts:
 
 - caption: 简介
   chapters:
-    - file: zh/intro.md
-      title: "0. 介绍"
+  - file: zh/intro.md
+    title: "0. 介绍"
 
 - caption: 教程
   numbered: 1
