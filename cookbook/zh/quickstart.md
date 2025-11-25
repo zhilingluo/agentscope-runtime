@@ -165,7 +165,7 @@ async def query_func(
 启动 Agent API 服务器，运行后，服务器会启动并监听：`http://localhost:8090/process`：
 
 ```{code-cell}
-app.run(host="0.0.0.0", port=8090)
+agent_app.run(host="0.0.0.0", port=8090)
 ```
 
 ### 步骤6：发送一个请求
