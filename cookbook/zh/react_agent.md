@@ -22,13 +22,13 @@ ReAct（推理与行动）范式使智能体能够将推理轨迹与特定任务
 
 ## 前置要求
 
-### 🔧 安装依赖
+### 安装依赖
 
 ```bash
 pip install agentscope-runtime
 ```
 
-### 🔑 API 密钥
+### 沙箱
 
 ```{note}
 确保您的浏览器沙箱环境已准备好使用，详细信息请参见{doc}`sandbox`。
@@ -40,7 +40,7 @@ pip install agentscope-runtime
 docker pull agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest && docker tag agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest agentscope/runtime-sandbox-browser:latest
 ```
 
-### 🔑 API密钥配置
+### API密钥配置
 
 您需要为您选择的LLM提供商准备API密钥。此示例使用DashScope（Qwen），但您可以将其适配到其他提供商：
 
@@ -259,4 +259,4 @@ print(resp.response["output"][0]["content"][0]["text"])
 
 ## 总结
 
-通过复现测试用例中的实现，你可以快速获得一个带有流式响应、会话记忆以及 OpenAI 兼容接口的 ReAct 智能体服务。若需部署到远端或扩展更多工具，只需替换 `DashScopeChatModel`、状态服务或工具注册逻辑即可。
+通过本章节的内容，你可以快速获得一个带有流式响应、会话记忆以及 OpenAI 兼容接口的 ReAct 智能体服务。若需部署到远端或扩展更多工具，只需替换 `DashScopeChatModel`、状态服务或工具注册逻辑即可。

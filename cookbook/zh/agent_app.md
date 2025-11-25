@@ -95,6 +95,7 @@ data: {"sequence_number":4,"object":"message","status":"completed","text":"Hello
 ## 生命周期钩子
 
 **功能**
+
 在应用启动前和停止后执行自定义逻辑，例如加载模型或关闭连接。
 
 ### 方式1：使用参数传递
@@ -166,6 +167,7 @@ async def shutdown_func(self):
 ## 健康检查接口
 
 **功能**
+
 自动提供健康探针接口，方便容器或集群部署。
 
 **接口列表**
@@ -189,6 +191,7 @@ curl http://localhost:8090/
 ## 中间件扩展
 
 **功能**
+
 在请求进入或完成时执行额外逻辑（例如日志、鉴权、限流）。
 
 **用法示例**
@@ -211,6 +214,7 @@ AgentApp 内置：
 ## Celery 异步任务队列（可选）
 
 **功能**
+
 支持长耗时后台任务，不阻塞 HTTP 主线程。
 
 **关键参数**
@@ -255,6 +259,7 @@ curl http://localhost:8090/longjob/abc123
 ## 自定义查询处理
 
 **功能**
+
 使用 `@app.query()` 装饰器可以完全自定义查询处理逻辑，实现更灵活的控制，包括状态管理、会话历史管理等。
 
 ### 基本用法
@@ -337,73 +342,6 @@ async def query_func(
 4. **状态管理**：可以访问 `self.state_service` 进行状态保存和恢复
 5. **会话历史**：可以访问 `self.session_service` 管理会话历史
 
-### 状态服务（StateService）详解
-
-`StateService` 用于管理智能体的状态，支持状态的保存、恢复和管理。在自定义查询处理中，您可以通过 `self.state_service` 访问状态服务。
-
-**主要方法**：
-
-- `save_state(user_id, state, session_id=None, round_id=None)`：保存智能体状态
-- `export_state(user_id, session_id=None, round_id=None)`：导出/加载智能体状态
-- `list_states(user_id, session_id=None)`：列出所有状态
-- `delete_state(user_id, session_id=None, round_id=None)`：删除状态
-
-**实现类**：
-
-- `InMemoryStateService`：内存实现，适合开发和测试
-- `RedisStateService`：Redis 实现，适合生产环境，支持持久化
-
-**使用示例**：
-
-```{code-cell}
-from agentscope_runtime.engine.services.agent_state import (
-    InMemoryStateService,
-    RedisStateService,
-)
-
-# 使用内存状态服务（开发环境）
-@app.init
-async def init_func(self):
-    self.state_service = InMemoryStateService()
-    await self.state_service.start()
-
-# 使用 Redis 状态服务（生产环境）
-@app.init
-async def init_func(self):
-    self.state_service = RedisStateService(
-        host="localhost",
-        port=6379,
-        db=0,
-    )
-    await self.state_service.start()
-
-# 在查询处理中使用状态服务
-@app.query(framework="agentscope")
-async def query_func(self, msgs, request: AgentRequest = None, **kwargs):
-    session_id = request.session_id
-    user_id = request.user_id
-    
-    # 加载历史状态
-    state = await self.state_service.export_state(
-        user_id=user_id,
-        session_id=session_id,
-    )
-    
-    # 创建 Agent 并恢复状态
-    agent = ReActAgent(...)
-    if state:
-        agent.load_state_dict(state)
-    
-    # 处理消息...
-    
-    # 保存状态
-    new_state = agent.state_dict()
-    await self.state_service.save_state(
-        user_id=user_id,
-        session_id=session_id,
-        state=new_state,
-    )
-```
 
 ### 完整示例：带状态管理的 AgentApp
 
@@ -514,6 +452,7 @@ app.run(host="0.0.0.0", port=8090)
 ## 部署到本地或远程
 
 **功能**
+
 通过 `deploy()` 方法统一部署到不同运行环境。
 
 **用法示例**

@@ -28,7 +28,7 @@ pip install agentscope-runtime
 
 ### 🔑 API密钥配置
 
-您需要为所选的大语言模型提供商提供API密钥。本示例使用DashScope（Qwen）：
+您需要为所选的大语言模型提供商提供API密钥。本示例使用阿里云的Qwen模型，服务提供方是DashScope，所以需要使用其API_KEY，您可以按如下方式将key作为环境变量：
 
 ```bash
 export DASHSCOPE_API_KEY="your_api_key_here"
@@ -223,3 +223,10 @@ response = client.responses.create(
 
 print(response)
 ```
+
+## 章节导读
+后续的章节包括如下几个部分
+- {doc}`tool`: 帮助您在Agent中加入工具
+- {doc}`deployment`: 帮助您部署Agent，打包成服务
+- {doc}`use`: 帮助您调用部署后的服务
+- {doc}`contribute`: 贡献代码给本项目的参考文档

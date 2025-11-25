@@ -410,12 +410,8 @@ bound_tool = original_tool.bind(sandbox=my_sandbox)
 
 前面的部分介绍了以工具为中心的使用方法，而本节介绍以沙箱为中心的使用方法。
 
-您可以通过`sandbox` SDK创建不同类型的沙箱。有两种主要方式：
+您可以通过`sandbox` SDK创建不同类型的沙箱。通过 `SandboxService` 管理沙箱生命周期，支持会话管理和沙箱复用。
 
-1. **使用 SandboxService（推荐）**：通过 `SandboxService` 管理沙箱生命周期，支持会话管理和沙箱复用。
-2. **使用上下文管理器**：直接使用沙箱类的上下文管理器，适合简单的单次使用场景。
-
-#### 使用 SandboxService 创建沙箱
 
 ```{code-cell}
 import asyncio
@@ -447,9 +443,6 @@ async def main():
 asyncio.run(main())
 ```
 
-#### 使用上下文管理器创建沙箱
-
-您也可以通过上下文管理器直接创建不同类型的沙箱：
 
 * **基础沙箱（Base Sandbox）**：用于在隔离环境中运行 **Python 代码** 或 **Shell 命令**。
 
