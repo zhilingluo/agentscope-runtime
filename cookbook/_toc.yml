@@ -1,6 +1,11 @@
 format: jb-book
 root: en/intro
 parts:
+- caption: Introduction
+  chapters:
+    - file: en/intro.md
+      title: "0. Introduction"
+      
 - caption: Tutorial
   numbered: 1
   chapters:
@@ -10,8 +15,7 @@ parts:
   - file: en/tool.md
     sections:
     - file: en/dashscope_tools.md
-  - file: en/sandbox.md
-    sections:
+    - file: en/sandbox.md
     - file: en/sandbox_advanced.md
     - file: en/training_sandbox.md
     - file: en/sandbox_troubleshooting.md
@@ -29,21 +33,9 @@ parts:
     - file: en/protocol.md
     - file: en/demohouse.md
     - file: en/ut.md
-  - file: en/context_manager.md
-  - file: en/environment_manager.md
   - file: en/contribute.md
     sections:
     - file: en/README.md
-
-- caption: API Reference
-  chapters:
-  - file: en/api/index.md
-    title: "API Reference"
-    sections:
-    - file: en/api/sandbox.md
-      title: "Sandbox"
-    - file: en/api/engine.md
-      title: "Engine"
 
 - caption: 简介
   chapters:
