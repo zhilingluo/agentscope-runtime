@@ -18,32 +18,28 @@
 
 ## What is AgentScope Runtime?
 
-**AgentScope Runtime** is a comprehensive runtime framework that addresses two critical challenges: **effective agent deployment** and **sandboxed tool execution**. With built-in infrastructure for context management and secure sandboxing, it provides a framework-agnostic solution that works with popular open-source agent frameworks and custom implementations. Whether you need to deploy agents at scale or ensure safe tool interactions, AgentScope Runtime delivers essential infrastructure with full observability and developer-friendly deployment.
+**AgentScope Runtime** is a full-stack agent runtime that tackles two core challenges: **efficient agent deployment** and **secure sandbox execution**. It ships with foundational services such as short- and long-term memory plus external knowledge access, along with hardened sandbox infrastructure. Whether you need to orchestrate production-grade agents or guarantee safe tool interactions, AgentScope Runtime provides developer-friendly workflows with complete observability.
 
-This cookbook will guide you through building robust agent applications using **AgentScope Runtime**.
+This cookbook walks you through building service-ready agent applications with **AgentScope Runtime**.
 
 ## Dual-Core Architecture
 
 **⚙️ Agent Deployment Runtime (Engine)**
 
-Infrastructure for deploying, managing, and running agent applications with context management (session context, long memory), and environment control.
+Production infrastructure for deploying, managing, and observing agent applications, complete with built‑in services such as session context, long/short memory, and knowledge connectors.
 
 **🛠️ Tool Execution Runtime (Sandbox)**
 
-Secure, isolated environments that let your agents safely execute tools, control browsers, manage files, and integrate MCP tools - all without compromising your system security.
+Secure, isolated environments that let agents execute tools, control browsers, manipulate files, and integrate MCP tools—without exposing your host system.
 
 ## Why AgentScope Runtime?
 
-* **🏗️ Deployment Infrastructure**: Built-in services for session management, memory, and sandbox environment control
+* **🏗️ Deployment Infrastructure**: Built-in long/short memory, session services, and sandbox control
+* **🔒 Sandboxed Tool Execution**: Isolated sandboxes keep browser, file, and MCP tooling safe
+* ⚡ **Developer Friendly**: Simple deployment flows plus rich customization hooks
+* **📊 Observability**: End-to-end tracing and monitoring for runtime behavior
 
-* **🔒 Sandboxed Tool Execution**: Isolated sandboxes ensure safe tool execution without system compromise
-
-* **🔧 Framework Agnostic**: Not tied to any specific framework. Works seamlessly with popular open-source agent frameworks and custom implementations
-
-* ⚡ **Developer Friendly**: Simple deployment with powerful customization options
-
-* **📊 Observability**: Comprehensive tracing and monitoring for runtime operations
-
+Start deploying agents and experimenting with the sandbox today!
 
 ## Getting Started
 
