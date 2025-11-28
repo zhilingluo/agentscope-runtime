@@ -11,7 +11,7 @@ except ImportError:
     from typing_extensions import Self
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from openai.types.chat import ChatCompletionChunk
 
 
@@ -149,6 +149,72 @@ class FunctionCallOutput(BaseModel):
 
     output: str
     """The result of the function."""
+
+
+class McpCall(BaseModel):
+    id: str
+    """The unique ID of the tool call."""
+
+    arguments: str
+    """A JSON string of the arguments passed to the tool."""
+
+    name: str
+    """The name of the tool that was run."""
+
+    server_label: str
+    """The label of the MCP server running the tool."""
+
+    error: Optional[str] = None
+    """The error from the tool call, if any."""
+
+    output: Optional[str] = None
+    """The output from the tool call."""
+
+
+class McpListToolsTool(BaseModel):
+    input_schema: object
+    """The JSON schema describing the tool's input."""
+
+    name: str
+    """The name of the tool."""
+
+    annotations: Optional[object] = None
+    """Additional annotations about the tool."""
+
+    description: Optional[str] = None
+    """The description of the tool."""
+
+
+class McpListTools(BaseModel):
+    id: str
+    """The unique ID of the list."""
+
+    server_label: str
+    """The label of the MCP server."""
+
+    tools: List[McpListToolsTool]
+    """The tools available on the server."""
+
+    error: Optional[str] = None
+    """Error message if the server could not list tools."""
+
+
+class McpApprovalRequest(BaseModel):
+    """
+    mcp approval request
+    """
+
+    id: str
+    """The unique ID of the approval request."""
+
+    arguments: str
+    """A json string of arguments for the tool."""
+
+    name: str
+    """The name of the tool to run."""
+
+    server_label: str
+    """The label of the mcp server making the request."""
 
 
 class Error(BaseModel):
@@ -632,9 +698,49 @@ class BaseRequest(BaseModel):
     stream: bool = True
     """If set, partial message deltas will be sent, like in ChatGPT. """
 
+    id: Optional[str] = None
+    """request unique id"""
+
 
 class AgentRequest(BaseRequest):
     """agent request"""
+
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "input": [
+                    {
+                        "role": "user",
+                        "type": "message",
+                        "content": [{"type": "text", "text": "hello"}],
+                    },
+                    {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "object": "content",
+                                "type": "text",
+                                "text": "Hello! How can I assist you today?",
+                            },
+                        ],
+                    },
+                    {
+                        "role": "user",
+                        "type": "message",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "What is the capital of France?",
+                            },
+                        ],
+                    },
+                ],
+                "session_id": "1764056632961",
+            },
+        },
+    )
 
     model: Optional[str] = None
     """
@@ -707,8 +813,8 @@ class AgentRequest(BaseRequest):
     session_id: Optional[str] = None
     """conversation id for dialog"""
 
-    response_id: Optional[str] = None
-    """response unique id"""
+    user_id: Optional[str] = None
+    """User id for dialog"""
 
 
 class BaseResponse(Event):
