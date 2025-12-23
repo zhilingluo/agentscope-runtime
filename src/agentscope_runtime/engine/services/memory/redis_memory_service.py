@@ -236,7 +236,7 @@ class RedisMemoryService(MemoryService):
                 try:
                     msgs = self._deserialize(msgs_json)
                     all_msgs.extend(msgs)
-                except Exception:
+                except json.JSONDecodeError:
                     # Skip corrupted message data
                     continue
 
