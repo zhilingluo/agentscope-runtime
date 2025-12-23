@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
-from typing import Optional, Dict, Any
 import json
-import redis.asyncio as aioredis
+import logging
+from typing import Optional, Dict, Any
 
+import redis.asyncio as aioredis
 
 from .memory_service import MemoryService
 from ...schemas.agent_schemas import Message, MessageType
+
+logger = logging.getLogger(__name__)
 
 
 class RedisMemoryService(MemoryService):
@@ -104,7 +107,16 @@ class RedisMemoryService(MemoryService):
     def _deserialize(self, messages_json):
         if not messages_json:
             return []
-        return [Message.parse_obj(m) for m in json.loads(messages_json)]
+        try:
+            messages_data = json.loads(messages_json)
+            return [Message.parse_obj(m) for m in messages_data]
+        except Exception as e:
+            # Return empty list for corrupted message data
+            logger.warning(
+                "Failed to deserialize message data: %s",
+                e,
+            )
+            return []
 
     async def add_memory(
         self,
@@ -174,10 +186,9 @@ class RedisMemoryService(MemoryService):
             msgs_json = await self._redis.hget(key, session_id)
             if not msgs_json:
                 continue
-            try:
-                msgs = self._deserialize(msgs_json)
-            except Exception:
-                # Skip corrupted message data
+            # _deserialize handles exceptions internally and returns empty list
+            msgs = self._deserialize(msgs_json)
+            if not msgs:
                 continue
 
             # Match messages in this session
@@ -233,12 +244,11 @@ class RedisMemoryService(MemoryService):
         for session_id in sorted(hash_keys):
             msgs_json = await self._redis.hget(key, session_id)
             if msgs_json:
-                try:
-                    msgs = self._deserialize(msgs_json)
+                # _deserialize handles exceptions internally
+                # and returns empty list
+                msgs = self._deserialize(msgs_json)
+                if msgs:
                     all_msgs.extend(msgs)
-                except Exception:
-                    # Skip corrupted message data
-                    continue
 
                 # Early exit optimization: if we've loaded enough messages
                 # to cover the requested page, we can stop (but this assumes

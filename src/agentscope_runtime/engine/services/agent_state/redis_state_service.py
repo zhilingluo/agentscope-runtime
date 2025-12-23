@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 import json
+import logging
 from typing import Optional, Dict, Any
 
 import redis.asyncio as aioredis
 
 from .state_service import StateService
+
+logger = logging.getLogger(__name__)
 
 
 class RedisStateService(StateService):
@@ -161,6 +164,14 @@ class RedisStateService(StateService):
 
         try:
             return json.loads(state_json)
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError) as e:
             # Return None for corrupted state data instead of raising exception
+            logger.warning(
+                "Failed to deserialize state data for user_id=%s, "
+                "session_id=%s, round_id=%s: %s",
+                user_id,
+                sid,
+                round_id,
+                e,
+            )
             return None

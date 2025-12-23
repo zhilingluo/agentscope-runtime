@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 import uuid
 
 from typing import Optional, Dict, Any, List, Union
@@ -8,6 +9,8 @@ import redis.asyncio as aioredis
 from .session_history_service import SessionHistoryService
 from ...schemas.session import Session
 from ...schemas.agent_schemas import Message
+
+logger = logging.getLogger(__name__)
 
 
 class RedisSessionHistoryService(SessionHistoryService):
@@ -138,8 +141,15 @@ class RedisSessionHistoryService(SessionHistoryService):
 
         try:
             session = self._session_from_json(session_json)
-        except Exception:
+        except Exception as e:
             # Return None for corrupted session data
+            logger.warning(
+                "Failed to deserialize session data for user_id=%s, "
+                "session_id=%s: %s",
+                user_id,
+                session_id,
+                e,
+            )
             return None
 
         # Refresh TTL when accessing the session
@@ -179,8 +189,14 @@ class RedisSessionHistoryService(SessionHistoryService):
                         session = self._session_from_json(session_json)
                         session.messages = []
                         sessions.append(session)
-                    except Exception:
+                    except Exception as e:
                         # Skip corrupted session data
+                        logger.warning(
+                            "Failed to deserialize session data for "
+                            "key=%s: %s",
+                            key,
+                            e,
+                        )
                         continue
 
             if cursor == 0:
@@ -218,22 +234,31 @@ class RedisSessionHistoryService(SessionHistoryService):
         session_json = await self._redis.get(key)
         if session_json is None:
             # Session expired or not found, treat as a new session
-            # Create a new session with the current messages
+            # Create a new session with all messages from the in-memory session
+            # (which already includes the newly appended messages)
             stored_session = Session(
                 id=session_id,
                 user_id=user_id,
-                messages=norm_message.copy(),
+                messages=session.messages.copy(),
             )
         else:
             try:
                 stored_session = self._session_from_json(session_json)
                 stored_session.messages.extend(norm_message)
-            except Exception:
+            except Exception as e:
                 # Session data corrupted, treat as a new session
+                # Use all messages from the in-memory session
+                logger.warning(
+                    "Failed to deserialize session data for user_id=%s, "
+                    "session_id=%s, treating as new session: %s",
+                    user_id,
+                    session_id,
+                    e,
+                )
                 stored_session = Session(
                     id=session_id,
                     user_id=user_id,
-                    messages=norm_message.copy(),
+                    messages=session.messages.copy(),
                 )
 
         # Limit the number of messages per session to prevent memory issues
