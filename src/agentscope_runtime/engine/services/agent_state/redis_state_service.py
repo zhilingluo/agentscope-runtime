@@ -161,6 +161,6 @@ class RedisStateService(StateService):
 
         try:
             return json.loads(state_json)
-        except (json.JSONDecodeError, ValueError):
+        except json.JSONDecodeError:
             # Return None for corrupted state data instead of raising exception
             return None
